@@ -1,0 +1,40 @@
+---
+layout: archive
+title: "Projects"
+permalink: /projects/
+author_profile: true
+---
+
+{% for post in site.projects %}
+  <h2>{{ post.title }}</h2>
+  <p><strong>Date:</strong> {{ post.date | date: "%B %d, %Y" }}</p>
+  {% if post.venue %}
+    <p><strong>Venue:</strong> {{ post.venue }}</p>
+  {% endif %}
+  {% if post.excerpt %}
+    <p>{{ post.excerpt }}</p>
+  {% endif %}
+  <div>
+    {{ post.content }}
+  </div>
+  <hr />
+{% endfor %}
+
+
+
+
+
+<!-- 
+---
+layout: archive
+title: "Projects"
+permalink: /projects/
+author_profile: true
+---
+
+{% include base_path %}
+
+{% for post in site.projects reversed %}
+  {% include archive-single.html %}
+{% endfor %}
+-->
