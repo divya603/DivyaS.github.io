@@ -6,7 +6,7 @@ category: machine-learning
 excerpt: 'This project explores predicting loan defaults using machine learning models like XGBoost and Decision Trees, with significant improvements in recall for defaulted loans.'
 date: 2024-12-11
 tools: ['Python', 'XGBoost', 'SMOTE', 'GridSearchCV']
-repo: '' # Optional GitHub repository link
+repo: 'https://github.com/divya603/mortgage-default-prediction' # Optional GitHub repository link
 report: '' # Optional detailed report link
 ---
 
