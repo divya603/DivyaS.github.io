@@ -7,6 +7,7 @@ redirect_from:
   - /about.html
 ---
 I'm a graduate student at New York University.
+<span style="font-size:0.9em; color:gray;">1 minute read</span>
 
 I am currently working on my Master's Thesis under [Professor Todd Gureckis](https://todd.gureckislab.org/) at the [Computation and Cognition Lab](https://gureckislab.org/). I study how the timing and quantity of testimony affect its integration with direct experience.Specifically, I aim to explore how individuals or agents integrate social and experiential information, particularly when these sources are introduced at different times or come into conflict.  
 
