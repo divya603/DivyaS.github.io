@@ -10,6 +10,7 @@ venue_short: 'CCN 2026'
 authors: 'D. Srinivasan, E. Su, M. K. Ho, and T. Gureckis'
 slidesurl: ''
 paperurl: ''
+note: 'In press'
 citation: 'D. Srinivasan, E. Su, M. K. Ho, and T. Gureckis. (2026). &quot;Timing of guidance shapes experiential learning.&quot; <i>Proceedings of the 2026 Conference on Cognitive Computational Neuroscience (CCN 2026)</i>. In press.'
 ---
 

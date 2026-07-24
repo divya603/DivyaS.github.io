@@ -65,6 +65,13 @@ author_profile: true
   text-decoration: underline;
 }
 
+.pub-note {
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+  color: #888;
+  font-style: italic;
+}
+
 @media (max-width: 600px) {
   .pub-entry {
     grid-template-columns: 1fr;
@@ -86,7 +93,8 @@ author_profile: true
       <div class="pub-authors">{{ pub.authors | replace: "Divya Srinivasan", '<span class="my-name">Divya Srinivasan</span>' | replace: "D. Srinivasan", '<span class="my-name">D. Srinivasan</span>' }}</div>
       {% endif %}
       <div class="pub-links">
-        {% if pub.paperurl %}<a href="{{ pub.paperurl }}">[Paper]</a>{% endif %}
+        {% if pub.paperurl and pub.paperurl != '' %}<a href="{{ pub.paperurl }}">[Paper]</a>{% endif %}
+        {% if pub.note and pub.note != '' %}<span class="pub-note">[{{ pub.note }}]</span>{% endif %}
         {% if pub.slidesurl and pub.slidesurl != '' %}<a href="{{ pub.slidesurl }}">[Slides]</a>{% endif %}
       </div>
     </div>
