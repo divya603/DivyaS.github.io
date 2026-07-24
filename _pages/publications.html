@@ -83,7 +83,7 @@ author_profile: true
     <div class="pub-details">
       <div class="pub-title">{{ pub.title }}</div>
       {% if pub.authors %}
-      <div class="pub-authors">{{ pub.authors | replace: "Divya Srinivasan", '<span class="my-name">Divya Srinivasan</span>' }}</div>
+      <div class="pub-authors">{{ pub.authors | replace: "Divya Srinivasan", '<span class="my-name">Divya Srinivasan</span>' | replace: "D. Srinivasan", '<span class="my-name">D. Srinivasan</span>' }}</div>
       {% endif %}
       <div class="pub-links">
         {% if pub.paperurl %}<a href="{{ pub.paperurl }}">[Paper]</a>{% endif %}
