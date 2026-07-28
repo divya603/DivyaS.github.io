@@ -140,6 +140,13 @@
   padding-right: 0;
 }
 
+/* The theme's "sticky footer fix" pins the footer with position:absolute,
+   which floats it mid-screen inside the scrollable canvas — restore flow */
+.paint-viewport .page__footer {
+  position: static;
+  float: none;
+}
+
 /* ---- Title bar ---- */
 .paint-app-titlebar {
   display: flex;
