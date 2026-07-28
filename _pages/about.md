@@ -1,11 +1,13 @@
 ---
 permalink: /
 title: "Hello there, I'm Divya!"
-author_profile: true
+author_profile: false
 redirect_from: 
   - /about/
   - /about.html
 ---
+<img src="/images/profilepic2.png" alt="Divya Srinivasan" class="home-portrait">
+
 I'm a graduate student at New York University majoring in Computer Science.
 
 At NYU, I am the lab manager and junior Laboratory Associate jointly under the [Computation and Decision-Making Lab](https://codec-lab.github.io/)  (PI: Dr. Mark Ho) and [AI Thought Partner Lab](https://ilia10000.github.io/) (PI: Dr. Ilia Sucholutsky) where I am exploring decision-making in humans and AI systems and the circumstances under which people will trust AI systems to make decisions on their behalf. My work delves into the intersection of learner modeling and diagnostic inference, focusing on how observers both human and algorithmic, can accurately reconstruct the latent cognitive processes that drive observable behavior. I am particularly interested in the 'reverse-engineering' of student logic, that is identifying the specific mental models, procedural shortcuts, and systematic misconceptions that lead to a given outcome.

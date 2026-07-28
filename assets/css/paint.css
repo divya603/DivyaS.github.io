@@ -1,55 +1,17 @@
 /* ==========================================================================
-   MS Paint drawing overlay
-   A Windows-95-style Paint window that lets visitors doodle on the page.
-   Markup: _includes/paint.html — Logic: assets/js/paint.js
+   MS Paint site chrome
+   The entire site lives inside a Windows-95-style Paint window: title bar,
+   menu-bar navigation, tool strip on the left, color palette and status bar
+   at the bottom. Page content scrolls inside the white "canvas" and visitors
+   can draw on it. Markup: _layouts/default.html — Logic: assets/js/paint.js
    ========================================================================== */
 
-/* ---- Full-page drawing canvas (fixed, redrawn on scroll by JS) ---- */
-#mspaint-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none; /* never blocks clicks — drawing is captured on window */
-  z-index: 9000;
-  image-rendering: pixelated;
+.paint-app,
+.paint-app * {
+  box-sizing: border-box;
 }
 
-/* ---- Tool cursors, applied to the whole page while a tool is active ---- */
-body[data-paint-tool="pencil"] {
-  cursor: url('data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%3E%3Cpath%20d%3D%22M1%2019l2-6L13%203l4%204L7%2017l-6%202z%22%20fill%3D%22white%22%20stroke%3D%22black%22%2F%3E%3Cpath%20d%3D%22M1%2019l2-6%204%204-6%202z%22%20fill%3D%22black%22%2F%3E%3C%2Fsvg%3E') 1 19, crosshair;
-}
-body[data-paint-tool="brush"],
-body[data-paint-tool="spray"],
-body[data-paint-tool="line"] {
-  cursor: crosshair;
-}
-body[data-paint-tool="eraser"] {
-  cursor: url('data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Crect%20x%3D%221.5%22%20y%3D%221.5%22%20width%3D%2213%22%20height%3D%2213%22%20fill%3D%22white%22%20stroke%3D%22black%22%2F%3E%3C%2Fsvg%3E') 8 8, crosshair;
-}
-
-/* Links and buttons keep their normal cursor even while a tool is active */
-body[data-paint-tool] a,
-body[data-paint-tool] button,
-body[data-paint-tool] input,
-body[data-paint-tool] select,
-body[data-paint-tool] textarea,
-body[data-paint-tool] label,
-body[data-paint-tool] summary {
-  cursor: pointer;
-}
-body[data-paint-tool] input[type="text"],
-body[data-paint-tool] input[type="search"],
-body[data-paint-tool] textarea {
-  cursor: text;
-}
-
-/* ==========================================================================
-   The Paint window — classic Win95 silver chrome
-   ========================================================================== */
-.mspaint-window,
-.mspaint-taskbar-btn {
+.paint-app {
   --mp-face: #c0c0c0;
   --mp-hi: #ffffff;
   --mp-light: #dfdfdf;
@@ -59,72 +21,161 @@ body[data-paint-tool] textarea {
   font-size: 11px;
   line-height: 1.2;
   color: #000;
+}
+
+.paint-app-titlebar,
+.paint-app-menubar,
+.paint-app-tools,
+.mspaint-palette-row,
+.mspaint-status {
   -webkit-user-select: none;
   user-select: none;
 }
 
-.mspaint-window {
-  position: fixed;
-  left: 16px;
-  bottom: 48px;
-  width: 270px;
-  z-index: 9501;
-  background: var(--mp-face);
-  padding: 3px;
-  box-shadow:
-    inset -1px -1px 0 var(--mp-dark),
-    inset 1px 1px 0 var(--mp-light),
-    inset -2px -2px 0 var(--mp-shadow),
-    inset 2px 2px 0 var(--mp-hi),
-    2px 2px 6px rgba(0, 0, 0, 0.35);
+/* ==========================================================================
+   Desktop: full Paint application frame on a teal Win95 desktop
+   ========================================================================== */
+@media (min-width: 801px) {
+  html {
+    height: 100%;
+    overflow: hidden; /* overrides the theme's overflow-y: scroll — the viewport scrolls instead */
+  }
+  body.paint-shell {
+    height: 100%;
+    overflow: hidden;
+  }
+  body.paint-shell {
+    margin: 0;
+    background: #008080; /* the classic desktop */
+  }
+
+  .paint-app {
+    position: fixed;
+    inset: 10px;
+    display: flex;
+    flex-direction: column;
+    background: var(--mp-face);
+    padding: 3px;
+    box-shadow:
+      inset -1px -1px 0 var(--mp-dark),
+      inset 1px 1px 0 var(--mp-light),
+      inset -2px -2px 0 var(--mp-shadow),
+      inset 2px 2px 0 var(--mp-hi),
+      3px 3px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  .paint-app-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  .paint-viewport-wrap {
+    flex: 1;
+    position: relative;
+    margin: 1px 2px 2px 1px;
+    box-shadow:
+      inset 1px 1px 0 var(--mp-shadow),
+      inset -1px -1px 0 var(--mp-hi);
+    background: #fff;
+  }
+
+  .paint-viewport {
+    position: absolute;
+    inset: 2px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #fff;
+  }
+  [data-theme="dark"] .paint-viewport,
+  [data-theme="dark"] .paint-viewport-wrap {
+    background: #1a1a1a;
+  }
+
+  #mspaint-canvas {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    pointer-events: none; /* never blocks clicks — drawing is captured on window */
+    z-index: 40;
+    image-rendering: pixelated;
+  }
+
+  /* Win95 scrollbar for the canvas viewport (WebKit/Blink) */
+  .paint-viewport::-webkit-scrollbar {
+    width: 16px;
+    background: repeating-conic-gradient(#ffffff 0% 25%, #dfdfdf 0% 50%);
+    background-size: 2px 2px;
+  }
+  .paint-viewport::-webkit-scrollbar-thumb {
+    background: var(--mp-face);
+    box-shadow:
+      inset -1px -1px 0 var(--mp-dark),
+      inset 1px 1px 0 var(--mp-light),
+      inset -2px -2px 0 var(--mp-shadow),
+      inset 2px 2px 0 var(--mp-hi);
+  }
+
 }
-.mspaint-window *,
-.mspaint-window *::before,
-.mspaint-window *::after {
-  box-sizing: border-box;
+
+/* ==========================================================================
+   Content column: with the author sidebar gone, undo the theme's grid
+   offsets and center a single readable column
+   ========================================================================== */
+.paint-viewport #main {
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
 }
-.mspaint-window.mspaint-hidden {
-  display: none;
+.paint-viewport .page,
+.paint-viewport .archive {
+  float: none;
+  width: 100%;
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* ---- Title bar ---- */
-.mspaint-titlebar {
+.paint-app-titlebar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 20px;
-  padding: 2px 3px;
+  gap: 5px;
+  height: 24px;
+  flex: none;
+  padding: 2px 4px;
   background: linear-gradient(90deg, #000080, #1084d0);
   color: #fff;
   font-weight: bold;
-  cursor: move;
-  touch-action: none;
+  font-size: 12px;
 }
-.mspaint-titlebar-icon {
-  width: 14px;
-  height: 14px;
+.paint-titlebar-icon {
+  width: 15px;
+  height: 15px;
   flex: none;
 }
-.mspaint-titlebar-text {
+.paint-titlebar-text {
   flex: 1;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.mspaint-titlebar-btns {
+.paint-titlebar-btns {
   display: flex;
   gap: 2px;
   flex: none;
 }
-.mspaint-titlebar-btns button {
-  width: 16px;
-  height: 14px;
+.paint-titlebar-btns button {
+  width: 18px;
+  height: 16px;
   padding: 0;
   border: 0;
   background: var(--mp-face);
   color: #000;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: bold;
   line-height: 1;
   cursor: pointer;
@@ -134,46 +185,65 @@ body[data-paint-tool] textarea {
     inset -2px -2px 0 var(--mp-shadow),
     inset 2px 2px 0 var(--mp-light);
 }
-.mspaint-titlebar-btns button:active {
+.paint-titlebar-btns button:active {
   box-shadow:
     inset 1px 1px 0 var(--mp-dark),
     inset -1px -1px 0 var(--mp-hi),
     inset 2px 2px 0 var(--mp-shadow);
 }
 
-/* ---- Menu bar (decorative, for the vibe) ---- */
-.mspaint-menubar {
+/* ---- Menu bar: real site navigation dressed as Paint menus ---- */
+.paint-app-menubar {
   display: flex;
-  gap: 1px;
+  align-items: center;
+  flex: none;
   padding: 2px 2px 1px;
+  gap: 1px;
 }
-.mspaint-menubar span {
-  padding: 2px 6px;
+.paint-app-menubar a {
+  padding: 3px 8px;
+  color: #000;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 11px;
 }
-.mspaint-menubar span:hover {
+.paint-app-menubar a:hover,
+.paint-app-menubar a:focus-visible {
+  background: #000080;
+  color: #fff;
+}
+.paint-menubar-spacer {
+  flex: 1;
+}
+.paint-menu-toggle {
+  border: 0;
+  background: transparent;
+  padding: 3px 8px;
+  cursor: pointer;
+  color: #000;
+  font-size: 12px;
+  line-height: 1;
+}
+.paint-menu-toggle:hover {
   background: #000080;
   color: #fff;
 }
 
-/* ---- Main area: tool strip + hint "canvas" ---- */
-.mspaint-main {
-  display: flex;
-  gap: 4px;
-  padding: 3px 2px;
-}
-.mspaint-toolstrip {
+/* ---- Tool strip ---- */
+.paint-app-tools {
   flex: none;
-  width: 58px;
+  width: 64px;
+  padding: 4px 3px;
 }
 .mspaint-tools {
   display: grid;
-  grid-template-columns: repeat(2, 26px);
+  grid-template-columns: repeat(2, 27px);
   gap: 1px;
   justify-content: center;
 }
 .mspaint-tool {
-  width: 26px;
-  height: 26px;
+  width: 27px;
+  height: 27px;
   padding: 0;
   border: 0;
   display: flex;
@@ -208,8 +278,8 @@ body[data-paint-tool] textarea {
 
 /* ---- Line-size picker ---- */
 .mspaint-sizes {
-  margin: 4px auto 0;
-  width: 39px;
+  margin: 6px auto 0;
+  width: 41px;
   padding: 2px;
   background: var(--mp-face);
   box-shadow:
@@ -219,7 +289,7 @@ body[data-paint-tool] textarea {
 .mspaint-size {
   display: block;
   width: 100%;
-  height: 9px;
+  height: 10px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -246,43 +316,21 @@ body[data-paint-tool] textarea {
   background: #fff;
 }
 
-/* ---- Hint box, styled like Paint's white canvas ---- */
-.mspaint-hint {
-  flex: 1;
-  background: #fff;
-  padding: 6px 7px;
-  color: #333;
-  box-shadow:
-    inset 1px 1px 0 var(--mp-shadow),
-    inset -1px -1px 0 var(--mp-hi);
-}
-.mspaint-hint p {
-  margin: 0 0 5px;
-  font-size: 11px;
-  line-height: 1.35;
-}
-.mspaint-hint p:last-child {
-  margin-bottom: 0;
-}
-.mspaint-hint .mspaint-kbd {
-  font-size: 10px;
-  color: #666;
-}
-
 /* ---- Undo / Clear ---- */
 .mspaint-actions {
   display: flex;
-  gap: 4px;
-  padding: 1px 2px 3px;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 8px;
+  padding: 0 1px;
 }
 .mspaint-actions button {
-  flex: 1;
   height: 20px;
   padding: 0;
   border: 0;
   background: var(--mp-face);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 10px;
   cursor: pointer;
   box-shadow:
     inset -1px -1px 0 var(--mp-dark),
@@ -301,8 +349,9 @@ body[data-paint-tool] textarea {
 .mspaint-palette-row {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 2px 3px;
+  gap: 4px;
+  flex: none;
+  padding: 3px 4px;
 }
 .mspaint-current {
   flex: none;
@@ -316,8 +365,8 @@ body[data-paint-tool] textarea {
 }
 .mspaint-current-fg {
   position: absolute;
-  top: 6px;
-  left: 6px;
+  top: 7px;
+  left: 7px;
   width: 14px;
   height: 14px;
   background: #000;
@@ -330,7 +379,6 @@ body[data-paint-tool] textarea {
   display: grid;
   grid-template-columns: repeat(14, 16px);
   grid-auto-rows: 15px;
-  gap: 0;
 }
 .mspaint-swatch {
   width: 16px;
@@ -347,9 +395,10 @@ body[data-paint-tool] textarea {
 
 /* ---- Status bar ---- */
 .mspaint-status {
+  flex: none;
   margin: 0 2px 2px;
-  padding: 2px 5px;
-  height: 18px;
+  padding: 3px 6px;
+  height: 20px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -358,64 +407,79 @@ body[data-paint-tool] textarea {
     inset -1px -1px 0 var(--mp-hi);
 }
 
-/* ---- Minimized (rolled up) state ---- */
-.mspaint-window.mspaint-minimized .mspaint-menubar,
-.mspaint-window.mspaint-minimized .mspaint-main,
-.mspaint-window.mspaint-minimized .mspaint-actions,
-.mspaint-window.mspaint-minimized .mspaint-palette-row,
-.mspaint-window.mspaint-minimized .mspaint-status {
-  display: none;
+/* ==========================================================================
+   Tool cursors (only over the canvas viewport)
+   ========================================================================== */
+body[data-paint-tool="pencil"] .paint-viewport {
+  cursor: url('data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%3E%3Cpath%20d%3D%22M1%2019l2-6L13%203l4%204L7%2017l-6%202z%22%20fill%3D%22white%22%20stroke%3D%22black%22%2F%3E%3Cpath%20d%3D%22M1%2019l2-6%204%204-6%202z%22%20fill%3D%22black%22%2F%3E%3C%2Fsvg%3E') 1 19, crosshair;
+}
+body[data-paint-tool="brush"] .paint-viewport,
+body[data-paint-tool="spray"] .paint-viewport,
+body[data-paint-tool="line"] .paint-viewport {
+  cursor: crosshair;
+}
+body[data-paint-tool="eraser"] .paint-viewport {
+  cursor: url('data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Crect%20x%3D%221.5%22%20y%3D%221.5%22%20width%3D%2213%22%20height%3D%2213%22%20fill%3D%22white%22%20stroke%3D%22black%22%2F%3E%3C%2Fsvg%3E') 8 8, crosshair;
 }
 
-/* ---- Taskbar button, shown when the window is closed ---- */
-.mspaint-taskbar-btn {
-  position: fixed;
-  left: 12px;
-  bottom: 12px;
-  z-index: 9501;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px 0 7px;
-  border: 0;
-  background: var(--mp-face);
+/* Links and controls keep their normal cursor while a tool is active */
+body[data-paint-tool] .paint-viewport a,
+body[data-paint-tool] .paint-viewport button,
+body[data-paint-tool] .paint-viewport select,
+body[data-paint-tool] .paint-viewport label,
+body[data-paint-tool] .paint-viewport summary {
   cursor: pointer;
-  box-shadow:
-    inset -1px -1px 0 var(--mp-dark),
-    inset 1px 1px 0 var(--mp-light),
-    inset -2px -2px 0 var(--mp-shadow),
-    inset 2px 2px 0 var(--mp-hi),
-    2px 2px 5px rgba(0, 0, 0, 0.3);
 }
-.mspaint-taskbar-btn:active {
-  box-shadow:
-    inset 1px 1px 0 var(--mp-dark),
-    inset -1px -1px 0 var(--mp-hi),
-    inset 2px 2px 0 var(--mp-shadow),
-    2px 2px 5px rgba(0, 0, 0, 0.3);
-}
-.mspaint-taskbar-btn svg {
-  width: 15px;
-  height: 15px;
-  display: block;
-}
-.mspaint-taskbar-btn.mspaint-hidden {
-  display: none;
+body[data-paint-tool] .paint-viewport input,
+body[data-paint-tool] .paint-viewport textarea {
+  cursor: text;
 }
 
-/* ---- No paint on touch devices / small screens / print ---- */
-@media (max-width: 800px), (hover: none) and (pointer: coarse) {
-  #mspaint-canvas,
-  .mspaint-window,
-  .mspaint-taskbar-btn {
-    display: none !important;
+/* ==========================================================================
+   Homepage hero (text left, portrait right)
+   ========================================================================== */
+.home-portrait {
+  float: right;
+  width: 250px;
+  max-width: 42%;
+  margin: 0.3em 0 1em 1.6em;
+  border-radius: 4px;
+}
+@media (max-width: 600px) {
+  .home-portrait {
+    float: none;
+    display: block;
+    width: 65%;
+    max-width: 280px;
+    margin: 0 auto 1.2em;
   }
 }
-@media print {
+
+/* ==========================================================================
+   Small screens / touch: plain site, Paint chrome reduced to header bars
+   ========================================================================== */
+@media (max-width: 800px) {
+  .paint-app-tools,
+  .mspaint-palette-row,
+  .mspaint-status,
   #mspaint-canvas,
-  .mspaint-window,
-  .mspaint-taskbar-btn {
+  .paint-titlebar-btns {
+    display: none;
+  }
+  .paint-app-body,
+  .paint-viewport-wrap,
+  .paint-viewport {
+    display: block;
+  }
+}
+
+@media print {
+  .paint-app-titlebar,
+  .paint-app-menubar,
+  .paint-app-tools,
+  .mspaint-palette-row,
+  .mspaint-status,
+  #mspaint-canvas {
     display: none !important;
   }
 }

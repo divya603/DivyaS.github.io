@@ -1,26 +1,24 @@
-/* MS Paint drawing overlay.
-   Lets visitors doodle anywhere on the page with an MS-Paint-style tool window.
-   Strokes are stored in document coordinates and replayed onto a fixed,
-   viewport-sized canvas, translated by the current scroll offset. */
+/* MS Paint site chrome — drawing engine.
+   The page content scrolls inside #paint-viewport (Paint's white canvas).
+   Strokes are stored in content coordinates and replayed onto a fixed,
+   viewport-sized canvas overlay, translated by the viewport's scroll offset. */
 (function () {
   'use strict';
 
-  // Touch devices use the same gesture for scrolling — desktop only.
+  var canvas = document.getElementById('mspaint-canvas');
+  var viewport = document.getElementById('paint-viewport');
+  var app = document.querySelector('.paint-app');
+  if (!canvas || !viewport || !app) return;
+
+  // Touch devices scroll with the same gesture — drawing is desktop-only.
   if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
 
-  var canvas = document.getElementById('mspaint-canvas');
-  var win = document.getElementById('mspaint-window');
-  var taskbarBtn = document.getElementById('mspaint-taskbar-btn');
-  if (!canvas || !win || !taskbarBtn) return;
-
   var ctx = canvas.getContext('2d');
-  var statusEl = win.querySelector('.mspaint-status');
-  var currentFg = win.querySelector('.mspaint-current-fg');
+  var statusEl = document.getElementById('mspaint-status');
+  var currentFg = app.querySelector('.mspaint-current-fg');
 
-  var STORAGE_KEY = 'mspaint-open';
   var MAX_OPS = 400;
 
-  var enabled = true;
   var tool = 'pencil';
   var color = '#000000';
   var size = 2;
@@ -40,13 +38,15 @@
     eraser: 'Eraser: rub out your mistakes.'
   };
 
-  var INTERACTIVE = 'a,button,input,select,textarea,label,summary,iframe,video,audio,[contenteditable],.mspaint-window,.mspaint-taskbar-btn';
+  var INTERACTIVE = 'a,button,input,select,textarea,label,summary,iframe,video,audio,[contenteditable]';
 
   /* ---------- canvas + rendering ---------- */
 
   function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = viewport.clientWidth;
+    canvas.height = viewport.clientHeight;
+    canvas.style.width = viewport.clientWidth + 'px';
+    canvas.style.height = viewport.clientHeight + 'px';
     redraw();
   }
 
@@ -62,7 +62,7 @@
   function redraw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    ctx.translate(-window.scrollX, -window.scrollY);
+    ctx.translate(-viewport.scrollLeft, -viewport.scrollTop);
     var start = 0;
     for (var i = ops.length - 1; i >= 0; i--) {
       if (ops[i].tool === 'clear') { start = i + 1; break; }
@@ -107,17 +107,23 @@
 
   /* ---------- drawing input ---------- */
 
-  function docPoint(e) {
-    return { x: e.pageX, y: e.pageY };
+  function contentPoint(e) {
+    var r = viewport.getBoundingClientRect();
+    return {
+      x: e.clientX - r.left + viewport.scrollLeft,
+      y: e.clientY - r.top + viewport.scrollTop
+    };
   }
 
   function onPointerDown(e) {
-    if (!enabled || tool === 'select' || e.button !== 0) return;
-    if (window.getComputedStyle(win).display === 'none') return; // hidden by CSS (narrow screen)
+    if (tool === 'select' || e.button !== 0) return;
+    if (e.target !== viewport && !viewport.contains(e.target)) return;
+    var r = viewport.getBoundingClientRect();
+    if (e.clientX - r.left > viewport.clientWidth) return; // on the scrollbar
     if (e.target.closest && e.target.closest(INTERACTIVE)) return;
     e.preventDefault(); // stops text selection / image drag while sketching
-    lastPos = docPoint(e);
-    cur = { tool: tool, color: color, size: size, points: [docPoint(e)] };
+    lastPos = contentPoint(e);
+    cur = { tool: tool, color: color, size: size, points: [contentPoint(e)] };
     try {
       document.documentElement.setPointerCapture(e.pointerId);
     } catch (err) { /* capture is a nicety, not a requirement */ }
@@ -127,12 +133,12 @@
 
   function onPointerMove(e) {
     if (!cur) return;
-    lastPos = docPoint(e);
+    lastPos = contentPoint(e);
     if (cur.tool === 'spray') return; // dots are emitted by the timer
     if (cur.tool === 'line') {
-      cur.points[1] = docPoint(e);
+      cur.points[1] = contentPoint(e);
     } else {
-      cur.points.push(docPoint(e));
+      cur.points.push(contentPoint(e));
     }
     scheduleRedraw();
   }
@@ -176,27 +182,30 @@
   window.addEventListener('pointerup', endStroke);
   window.addEventListener('pointercancel', endStroke);
   window.addEventListener('blur', endStroke);
-  window.addEventListener('scroll', scheduleRedraw, { passive: true });
+  viewport.addEventListener('scroll', scheduleRedraw, { passive: true });
   window.addEventListener('resize', resizeCanvas);
+  if (window.ResizeObserver) {
+    new ResizeObserver(resizeCanvas).observe(viewport);
+  }
 
   /* ---------- toolbar ---------- */
 
   function setTool(next) {
     tool = next;
-    var buttons = win.querySelectorAll('.mspaint-tool[data-tool]');
+    var buttons = app.querySelectorAll('.mspaint-tool[data-tool]');
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].classList.toggle('is-active', buttons[i].getAttribute('data-tool') === next);
     }
-    updateBodyCursor();
-    if (statusEl) statusEl.textContent = STATUS[next] || '';
-  }
-
-  function updateBodyCursor() {
-    if (enabled && tool !== 'select') {
+    if (tool !== 'select') {
       document.body.setAttribute('data-paint-tool', tool);
     } else {
       document.body.removeAttribute('data-paint-tool');
     }
+    setStatus(STATUS[next] || '');
+  }
+
+  function setStatus(text) {
+    if (statusEl) statusEl.textContent = text;
   }
 
   function undo() {
@@ -211,24 +220,7 @@
     scheduleRedraw();
   }
 
-  function openWindow() {
-    enabled = true;
-    win.classList.remove('mspaint-hidden');
-    taskbarBtn.classList.add('mspaint-hidden');
-    updateBodyCursor();
-    try { window.localStorage.setItem(STORAGE_KEY, '1'); } catch (err) { /* private mode */ }
-  }
-
-  function closeWindow() {
-    enabled = false;
-    endStroke();
-    win.classList.add('mspaint-hidden');
-    taskbarBtn.classList.remove('mspaint-hidden');
-    updateBodyCursor();
-    try { window.localStorage.setItem(STORAGE_KEY, '0'); } catch (err) { /* private mode */ }
-  }
-
-  win.addEventListener('click', function (e) {
+  app.addEventListener('click', function (e) {
     var toolBtn = e.target.closest('.mspaint-tool[data-tool]');
     if (toolBtn) { setTool(toolBtn.getAttribute('data-tool')); return; }
 
@@ -242,25 +234,27 @@
     var sizeBtn = e.target.closest('.mspaint-size[data-size]');
     if (sizeBtn) {
       size = parseInt(sizeBtn.getAttribute('data-size'), 10) || 2;
-      var sizes = win.querySelectorAll('.mspaint-size');
+      var sizes = app.querySelectorAll('.mspaint-size');
       for (var i = 0; i < sizes.length; i++) sizes[i].classList.toggle('is-active', sizes[i] === sizeBtn);
       return;
     }
 
     if (e.target.closest('#mspaint-undo')) { undo(); return; }
     if (e.target.closest('#mspaint-clear')) { clearAll(); return; }
-    if (e.target.closest('#mspaint-minimize')) { win.classList.toggle('mspaint-minimized'); return; }
-    if (e.target.closest('#mspaint-close')) closeWindow();
+    if (e.target.closest('#mspaint-close')) {
+      setStatus("Nice try — this website IS the Paint window. There's no escape.");
+      return;
+    }
+    if (e.target.closest('#mspaint-minimize') || e.target.closest('#mspaint-maximize')) {
+      setStatus('This window is already exactly the right size.');
+    }
   });
-
-  taskbarBtn.addEventListener('click', openWindow);
 
   document.addEventListener('keydown', function (e) {
     var t = e.target;
     var editing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
     if (editing) return;
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
-      if (!enabled) return;
       e.preventDefault();
       undo();
     } else if (e.key === 'Escape') {
@@ -268,47 +262,8 @@
     }
   });
 
-  /* ---------- draggable window ---------- */
-
-  var titlebar = win.querySelector('.mspaint-titlebar');
-  if (titlebar) {
-    var dragDX = 0;
-    var dragDY = 0;
-    var dragging = false;
-
-    titlebar.addEventListener('pointerdown', function (e) {
-      if (e.target.closest('button')) return;
-      e.preventDefault();
-      var rect = win.getBoundingClientRect();
-      win.style.left = rect.left + 'px';
-      win.style.top = rect.top + 'px';
-      win.style.bottom = 'auto';
-      dragDX = e.clientX - rect.left;
-      dragDY = e.clientY - rect.top;
-      dragging = true;
-      try { titlebar.setPointerCapture(e.pointerId); } catch (err) { /* ok */ }
-    });
-    titlebar.addEventListener('pointermove', function (e) {
-      if (!dragging) return;
-      var x = Math.min(Math.max(e.clientX - dragDX, 4 - win.offsetWidth + 40), window.innerWidth - 40);
-      var y = Math.min(Math.max(e.clientY - dragDY, 0), window.innerHeight - 24);
-      win.style.left = x + 'px';
-      win.style.top = y + 'px';
-    });
-    titlebar.addEventListener('pointerup', function () { dragging = false; });
-    titlebar.addEventListener('pointercancel', function () { dragging = false; });
-  }
-
   /* ---------- init ---------- */
 
   resizeCanvas();
   setTool('pencil');
-
-  var openPref = null;
-  try { openPref = window.localStorage.getItem(STORAGE_KEY); } catch (err) { /* private mode */ }
-  if (openPref === '0') {
-    closeWindow();
-  } else {
-    openWindow();
-  }
 })();
