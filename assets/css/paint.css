@@ -1,0 +1,421 @@
+/* ==========================================================================
+   MS Paint drawing overlay
+   A Windows-95-style Paint window that lets visitors doodle on the page.
+   Markup: _includes/paint.html — Logic: assets/js/paint.js
+   ========================================================================== */
+
+/* ---- Full-page drawing canvas (fixed, redrawn on scroll by JS) ---- */
+#mspaint-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none; /* never blocks clicks — drawing is captured on window */
+  z-index: 9000;
+  image-rendering: pixelated;
+}
+
+/* ---- Tool cursors, applied to the whole page while a tool is active ---- */
+body[data-paint-tool="pencil"] {
+  cursor: url('data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%3E%3Cpath%20d%3D%22M1%2019l2-6L13%203l4%204L7%2017l-6%202z%22%20fill%3D%22white%22%20stroke%3D%22black%22%2F%3E%3Cpath%20d%3D%22M1%2019l2-6%204%204-6%202z%22%20fill%3D%22black%22%2F%3E%3C%2Fsvg%3E') 1 19, crosshair;
+}
+body[data-paint-tool="brush"],
+body[data-paint-tool="spray"],
+body[data-paint-tool="line"] {
+  cursor: crosshair;
+}
+body[data-paint-tool="eraser"] {
+  cursor: url('data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Crect%20x%3D%221.5%22%20y%3D%221.5%22%20width%3D%2213%22%20height%3D%2213%22%20fill%3D%22white%22%20stroke%3D%22black%22%2F%3E%3C%2Fsvg%3E') 8 8, crosshair;
+}
+
+/* Links and buttons keep their normal cursor even while a tool is active */
+body[data-paint-tool] a,
+body[data-paint-tool] button,
+body[data-paint-tool] input,
+body[data-paint-tool] select,
+body[data-paint-tool] textarea,
+body[data-paint-tool] label,
+body[data-paint-tool] summary {
+  cursor: pointer;
+}
+body[data-paint-tool] input[type="text"],
+body[data-paint-tool] input[type="search"],
+body[data-paint-tool] textarea {
+  cursor: text;
+}
+
+/* ==========================================================================
+   The Paint window — classic Win95 silver chrome
+   ========================================================================== */
+.mspaint-window,
+.mspaint-taskbar-btn {
+  --mp-face: #c0c0c0;
+  --mp-hi: #ffffff;
+  --mp-light: #dfdfdf;
+  --mp-shadow: #808080;
+  --mp-dark: #0a0a0a;
+  font-family: Tahoma, "MS Sans Serif", Geneva, Verdana, sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #000;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.mspaint-window {
+  position: fixed;
+  left: 16px;
+  bottom: 48px;
+  width: 270px;
+  z-index: 9501;
+  background: var(--mp-face);
+  padding: 3px;
+  box-shadow:
+    inset -1px -1px 0 var(--mp-dark),
+    inset 1px 1px 0 var(--mp-light),
+    inset -2px -2px 0 var(--mp-shadow),
+    inset 2px 2px 0 var(--mp-hi),
+    2px 2px 6px rgba(0, 0, 0, 0.35);
+}
+.mspaint-window *,
+.mspaint-window *::before,
+.mspaint-window *::after {
+  box-sizing: border-box;
+}
+.mspaint-window.mspaint-hidden {
+  display: none;
+}
+
+/* ---- Title bar ---- */
+.mspaint-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 2px 3px;
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #fff;
+  font-weight: bold;
+  cursor: move;
+  touch-action: none;
+}
+.mspaint-titlebar-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.mspaint-titlebar-text {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mspaint-titlebar-btns {
+  display: flex;
+  gap: 2px;
+  flex: none;
+}
+.mspaint-titlebar-btns button {
+  width: 16px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: var(--mp-face);
+  color: #000;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow:
+    inset -1px -1px 0 var(--mp-dark),
+    inset 1px 1px 0 var(--mp-hi),
+    inset -2px -2px 0 var(--mp-shadow),
+    inset 2px 2px 0 var(--mp-light);
+}
+.mspaint-titlebar-btns button:active {
+  box-shadow:
+    inset 1px 1px 0 var(--mp-dark),
+    inset -1px -1px 0 var(--mp-hi),
+    inset 2px 2px 0 var(--mp-shadow);
+}
+
+/* ---- Menu bar (decorative, for the vibe) ---- */
+.mspaint-menubar {
+  display: flex;
+  gap: 1px;
+  padding: 2px 2px 1px;
+}
+.mspaint-menubar span {
+  padding: 2px 6px;
+}
+.mspaint-menubar span:hover {
+  background: #000080;
+  color: #fff;
+}
+
+/* ---- Main area: tool strip + hint "canvas" ---- */
+.mspaint-main {
+  display: flex;
+  gap: 4px;
+  padding: 3px 2px;
+}
+.mspaint-toolstrip {
+  flex: none;
+  width: 58px;
+}
+.mspaint-tools {
+  display: grid;
+  grid-template-columns: repeat(2, 26px);
+  gap: 1px;
+  justify-content: center;
+}
+.mspaint-tool {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mp-face);
+  cursor: pointer;
+  box-shadow:
+    inset -1px -1px 0 var(--mp-dark),
+    inset 1px 1px 0 var(--mp-hi),
+    inset -2px -2px 0 var(--mp-shadow),
+    inset 2px 2px 0 var(--mp-light);
+}
+.mspaint-tool svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+.mspaint-tool:active,
+.mspaint-tool.is-active {
+  background: #fff;
+  box-shadow:
+    inset 1px 1px 0 var(--mp-dark),
+    inset -1px -1px 0 var(--mp-hi),
+    inset 2px 2px 0 var(--mp-shadow),
+    inset -2px -2px 0 var(--mp-light);
+}
+.mspaint-tool.is-active {
+  background-image: repeating-conic-gradient(#fff 0% 25%, #dfdfdf 0% 50%);
+  background-size: 4px 4px;
+}
+
+/* ---- Line-size picker ---- */
+.mspaint-sizes {
+  margin: 4px auto 0;
+  width: 39px;
+  padding: 2px;
+  background: var(--mp-face);
+  box-shadow:
+    inset 1px 1px 0 var(--mp-shadow),
+    inset -1px -1px 0 var(--mp-hi);
+}
+.mspaint-size {
+  display: block;
+  width: 100%;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+.mspaint-size::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  background: #000;
+  transform: translateY(-50%);
+}
+.mspaint-size[data-size="1"]::after { height: 1px; }
+.mspaint-size[data-size="2"]::after { height: 2px; }
+.mspaint-size[data-size="4"]::after { height: 4px; }
+.mspaint-size[data-size="8"]::after { height: 6px; }
+.mspaint-size.is-active {
+  background: #000080;
+}
+.mspaint-size.is-active::after {
+  background: #fff;
+}
+
+/* ---- Hint box, styled like Paint's white canvas ---- */
+.mspaint-hint {
+  flex: 1;
+  background: #fff;
+  padding: 6px 7px;
+  color: #333;
+  box-shadow:
+    inset 1px 1px 0 var(--mp-shadow),
+    inset -1px -1px 0 var(--mp-hi);
+}
+.mspaint-hint p {
+  margin: 0 0 5px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.mspaint-hint p:last-child {
+  margin-bottom: 0;
+}
+.mspaint-hint .mspaint-kbd {
+  font-size: 10px;
+  color: #666;
+}
+
+/* ---- Undo / Clear ---- */
+.mspaint-actions {
+  display: flex;
+  gap: 4px;
+  padding: 1px 2px 3px;
+}
+.mspaint-actions button {
+  flex: 1;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: var(--mp-face);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow:
+    inset -1px -1px 0 var(--mp-dark),
+    inset 1px 1px 0 var(--mp-hi),
+    inset -2px -2px 0 var(--mp-shadow),
+    inset 2px 2px 0 var(--mp-light);
+}
+.mspaint-actions button:active {
+  box-shadow:
+    inset 1px 1px 0 var(--mp-dark),
+    inset -1px -1px 0 var(--mp-hi),
+    inset 2px 2px 0 var(--mp-shadow);
+}
+
+/* ---- Color box ---- */
+.mspaint-palette-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 2px 3px;
+}
+.mspaint-current {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  position: relative;
+  background: var(--mp-face);
+  box-shadow:
+    inset 1px 1px 0 var(--mp-shadow),
+    inset -1px -1px 0 var(--mp-hi);
+}
+.mspaint-current-fg {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 14px;
+  height: 14px;
+  background: #000;
+  box-shadow:
+    inset 1px 1px 0 var(--mp-dark),
+    inset -1px -1px 0 var(--mp-light),
+    0 0 0 1px var(--mp-shadow);
+}
+.mspaint-palette {
+  display: grid;
+  grid-template-columns: repeat(14, 16px);
+  grid-auto-rows: 15px;
+  gap: 0;
+}
+.mspaint-swatch {
+  width: 16px;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0 var(--mp-shadow),
+    inset -1px -1px 0 var(--mp-hi),
+    inset 2px 2px 0 var(--mp-dark),
+    inset -2px -2px 0 var(--mp-light);
+}
+
+/* ---- Status bar ---- */
+.mspaint-status {
+  margin: 0 2px 2px;
+  padding: 2px 5px;
+  height: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-shadow:
+    inset 1px 1px 0 var(--mp-shadow),
+    inset -1px -1px 0 var(--mp-hi);
+}
+
+/* ---- Minimized (rolled up) state ---- */
+.mspaint-window.mspaint-minimized .mspaint-menubar,
+.mspaint-window.mspaint-minimized .mspaint-main,
+.mspaint-window.mspaint-minimized .mspaint-actions,
+.mspaint-window.mspaint-minimized .mspaint-palette-row,
+.mspaint-window.mspaint-minimized .mspaint-status {
+  display: none;
+}
+
+/* ---- Taskbar button, shown when the window is closed ---- */
+.mspaint-taskbar-btn {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 9501;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px 0 7px;
+  border: 0;
+  background: var(--mp-face);
+  cursor: pointer;
+  box-shadow:
+    inset -1px -1px 0 var(--mp-dark),
+    inset 1px 1px 0 var(--mp-light),
+    inset -2px -2px 0 var(--mp-shadow),
+    inset 2px 2px 0 var(--mp-hi),
+    2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+.mspaint-taskbar-btn:active {
+  box-shadow:
+    inset 1px 1px 0 var(--mp-dark),
+    inset -1px -1px 0 var(--mp-hi),
+    inset 2px 2px 0 var(--mp-shadow),
+    2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+.mspaint-taskbar-btn svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+.mspaint-taskbar-btn.mspaint-hidden {
+  display: none;
+}
+
+/* ---- No paint on touch devices / small screens / print ---- */
+@media (max-width: 800px), (hover: none) and (pointer: coarse) {
+  #mspaint-canvas,
+  .mspaint-window,
+  .mspaint-taskbar-btn {
+    display: none !important;
+  }
+}
+@media print {
+  #mspaint-canvas,
+  .mspaint-window,
+  .mspaint-taskbar-btn {
+    display: none !important;
+  }
+}
