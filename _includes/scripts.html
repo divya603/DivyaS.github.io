@@ -1,55 +1,5 @@
 <script src="{{ site.baseurl }}/assets/js/main.min.js"></script>
-
-<script>
-// Theme toggle functionality
-(function() {
-  const themeToggle = document.getElementById('theme-toggle');
-  const themeIcon = document.getElementById('theme-icon');
-  const html = document.documentElement;
-  
-  if (!themeToggle || !themeIcon) return;
-  
-  // Get saved theme or default to light
-  const currentTheme = localStorage.getItem('theme') || 'light';
-  html.setAttribute('data-theme', currentTheme);
-  
-  // Update icon based on current theme
-  if (currentTheme === 'dark') {
-    themeIcon.classList.remove('fa-sun');
-    themeIcon.classList.add('fa-moon');
-  } else {
-    themeIcon.classList.remove('fa-moon');
-    themeIcon.classList.add('fa-sun');
-  }
-  
-  // Toggle theme on button click
-  themeToggle.addEventListener('click', function() {
-    const currentTheme = html.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    
-    html.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    
-    // Update icon
-    if (newTheme === 'dark') {
-      themeIcon.classList.remove('fa-sun');
-      themeIcon.classList.add('fa-moon');
-    } else {
-      themeIcon.classList.remove('fa-moon');
-      themeIcon.classList.add('fa-sun');
-    }
-  });
-})();
-</script>
+<script src="{{ site.baseurl }}/assets/js/theme-toggle.js"></script>
+<script src="{{ site.baseurl }}/assets/js/paint.js"></script>
 
 {% include analytics.html %}
-
-
-
-
-<!-- 
-
-<script src="{{ base_path }}/assets/js/main.min.js"></script>
-
-{% include analytics.html %}
--->
