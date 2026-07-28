@@ -17,17 +17,19 @@
   --mp-light: #dfdfdf;
   --mp-shadow: #808080;
   --mp-dark: #0a0a0a;
-  font-family: Tahoma, "MS Sans Serif", Geneva, Verdana, sans-serif;
-  font-size: 11px;
-  line-height: 1.2;
-  color: #000;
 }
 
+/* Chrome bars get the retro UI font; page content inside the viewport
+   keeps the theme's own typography and colors */
 .paint-app-titlebar,
 .paint-app-menubar,
 .paint-app-tools,
 .mspaint-palette-row,
 .mspaint-status {
+  font-family: Tahoma, "MS Sans Serif", Geneva, Verdana, sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #000;
   -webkit-user-select: none;
   user-select: none;
 }
