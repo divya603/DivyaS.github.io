@@ -502,6 +502,9 @@ body[data-paint-tool] .paint-viewport textarea {
   .paint-viewport .page__content > p {
     margin-left: -90px; /* paragraphs align with the name's left edge */
   }
+  .paint-viewport .home-portrait {
+    margin-right: -90px; /* mirrors the text shift so side margins match */
+  }
 }
 
 @media (max-width: 600px) {
