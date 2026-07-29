@@ -487,8 +487,9 @@ body[data-paint-tool] .paint-viewport textarea {
 /* ==========================================================================
    Homepage hero (text left, portrait right)
    ========================================================================== */
-/* Big Playfair name + tagline, Jordan-Lei-style */
-.home-name {
+/* Big Playfair name + tagline, Jordan-Lei-style
+   (.paint-viewport prefix outweighs the site-wide mono rule) */
+.paint-viewport .home-name {
   font-family: "Playfair Display", Georgia, serif;
   font-weight: 800;
   font-size: 3.4rem;
