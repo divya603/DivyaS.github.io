@@ -487,10 +487,42 @@ body[data-paint-tool] .paint-viewport textarea {
 /* ==========================================================================
    Homepage hero (text left, portrait right)
    ========================================================================== */
+/* Big Playfair name + tagline, Jordan-Lei-style */
+.home-name {
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 800;
+  font-size: 3.4rem;
+  line-height: 1.05;
+  margin: 0.15em 0 0.1em;
+}
+.home-tagline {
+  margin: 0 0 2.2em;
+  color: #7a8288;
+  letter-spacing: 0.04em;
+  font-size: 0.95em;
+}
+[data-theme="dark"] .home-tagline {
+  color: #9aa3a8;
+}
+
+/* Body paragraphs start ~1cm right of the name */
+.paint-viewport .page__content > p:not(.home-tagline) {
+  margin-left: 38px;
+}
+
+@media (max-width: 600px) {
+  .home-name {
+    font-size: 2.3rem;
+  }
+  .paint-viewport .page__content > p:not(.home-tagline) {
+    margin-left: 0;
+  }
+}
+
 .home-portrait {
   float: right;
-  width: 250px;
-  max-width: 42%;
+  width: 330px;
+  max-width: 45%;
   margin: 0.3em 0 1em 1.6em;
   border-radius: 4px;
 }

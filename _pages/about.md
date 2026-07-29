@@ -1,11 +1,13 @@
 ---
 permalink: /
-title: "Hello there, I'm Divya!"
 author_profile: false
 redirect_from: 
   - /about/
   - /about.html
 ---
+<h1 class="home-name">Divya Srinivasan</h1>
+<p class="home-tagline">Machine Learning &middot; Cognitive Modelling &middot; AI</p>
+
 <img src="/images/profilepic2.png" alt="Divya Srinivasan" class="home-portrait">
 
 I'm a graduate student at New York University majoring in Computer Science.
@@ -26,6 +28,4 @@ I’m on a personal quest to find the best hot fudge out there, because prioriti
 
 
 
-
-Key Interests : Machine Learning, Cognitive Modelling, AI
 
