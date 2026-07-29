@@ -519,10 +519,10 @@ body[data-paint-tool] .paint-viewport textarea {
 
 .home-portrait {
   float: right;
-  width: 330px;
-  max-width: 45%;
+  width: 400px;
+  max-width: 48%;
   margin: 0.3em 0 1em 1.6em;
-  border-radius: 4px;
+  border-radius: 0;
 }
 @media (max-width: 600px) {
   .home-portrait {
