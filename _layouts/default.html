@@ -11,10 +11,11 @@ layout: compress
     {% include head/custom.html %}
   </head>
 
-  <body class="paint-shell">
+  <body{% if site.paint_enabled %} class="paint-shell"{% endif %}>
 
     {% include browser-upgrade.html %}
 
+    {% if site.paint_enabled %}
     <div class="paint-app">
 
       <div class="paint-app-titlebar">
@@ -75,7 +76,7 @@ layout: compress
         </div>
 
         <div class="paint-viewport-wrap">
-          <div id="paint-viewport" class="paint-viewport">
+          <div id="paint-viewport" class="paint-viewport site-content">
             {{ content }}
             <div class="page__footer">
               <footer>
@@ -128,6 +129,21 @@ layout: compress
       <div class="mspaint-status"><span id="mspaint-status">Pencil: click and drag anywhere on the page to draw.</span></div>
 
     </div>
+    {% else %}
+
+    {% include masthead.html %}
+
+    <div class="site-content">
+      {{ content }}
+      <div class="page__footer">
+        <footer>
+          {% include footer/custom.html %}
+          {% include footer.html %}
+        </footer>
+      </div>
+    </div>
+
+    {% endif %}
 
     {% include scripts.html %}
 

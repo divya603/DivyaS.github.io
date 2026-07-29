@@ -17,6 +17,10 @@ baseurl: ""
  # the subpath of your site, e.g. "/blog"
 repository               : "divya603/divya603.github.io"
 
+# MS Paint site chrome (assets/css/paint.css, assets/js/paint.js, _layouts/default.html).
+# Set to true to wrap the whole site in the Paint window again — everything is kept intact.
+paint_enabled            : false
+
 # Site Author - The following control what appear as part of the author content on the side bar.
 #               If a field is blank the icon and link will not appear, otherwise it will be shown.
 #               Additional customization can be done by editing /_includes/author-profile.html
