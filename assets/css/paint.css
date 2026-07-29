@@ -147,6 +147,46 @@
   float: none;
 }
 
+/* ==========================================================================
+   Typography: all site content in Roboto Mono Light
+   (loaded in head/custom.html; the Paint chrome bars keep Tahoma)
+   ========================================================================== */
+.paint-viewport,
+.paint-viewport h1,
+.paint-viewport h2,
+.paint-viewport h3,
+.paint-viewport h4,
+.paint-viewport h5,
+.paint-viewport h6,
+.paint-viewport p,
+.paint-viewport li,
+.paint-viewport dl,
+.paint-viewport td,
+.paint-viewport th,
+.paint-viewport input,
+.paint-viewport textarea,
+.paint-viewport .page__lead,
+.paint-viewport .page__footer-copyright,
+.paint-viewport .archive__item-title,
+.paint-viewport .archive__item-excerpt {
+  font-family: "Roboto Mono", "Courier New", monospace;
+}
+.paint-viewport {
+  font-weight: 300;
+}
+.paint-viewport h1,
+.paint-viewport h2,
+.paint-viewport h3,
+.paint-viewport h4,
+.paint-viewport h5,
+.paint-viewport h6 {
+  font-weight: 300;
+}
+.paint-viewport strong,
+.paint-viewport b {
+  font-weight: 500;
+}
+
 /* ---- Title bar ---- */
 .paint-app-titlebar {
   display: flex;
