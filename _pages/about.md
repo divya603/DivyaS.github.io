@@ -6,7 +6,6 @@ redirect_from:
   - /about.html
 ---
 <h1 class="home-name">Divya Srinivasan</h1>
-<p class="home-tagline">Machine Learning &middot; Cognitive Modelling &middot; AI</p>
 
 <img src="/images/profilepic2.png" alt="Divya Srinivasan" class="home-portrait">
 
@@ -25,7 +24,4 @@ My bachelor's thesis was advised by Professor Joannes Sam Mertens from The Unive
 
 I’m on a personal quest to find the best hot fudge out there, because priorities. So far, the top spot goes to the hot fudge from [What’s the Scoop](https://whatsthescoopmetuchen.com/), but the search (happily) continues.
 
-
-
-
-
+Key Interests : Machine Learning, Cognitive Modelling, AI
