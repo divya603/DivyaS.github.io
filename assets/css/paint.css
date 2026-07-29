@@ -281,18 +281,18 @@
 /* ---- Tool strip ---- */
 .paint-app-tools {
   flex: none;
-  width: 64px;
+  width: 88px;
   padding: 4px 3px;
 }
 .mspaint-tools {
   display: grid;
-  grid-template-columns: repeat(2, 27px);
+  grid-template-columns: repeat(2, 37px);
   gap: 1px;
   justify-content: center;
 }
 .mspaint-tool {
-  width: 27px;
-  height: 27px;
+  width: 37px;
+  height: 37px;
   padding: 0;
   border: 0;
   display: flex;
@@ -307,8 +307,8 @@
     inset 2px 2px 0 var(--mp-light);
 }
 .mspaint-tool svg {
-  width: 16px;
-  height: 16px;
+  width: 25px;
+  height: 25px;
   display: block;
 }
 .mspaint-tool:active,
@@ -327,8 +327,8 @@
 
 /* ---- Line-size picker ---- */
 .mspaint-sizes {
-  margin: 6px auto 0;
-  width: 41px;
+  margin: 8px auto 0;
+  width: 56px;
   padding: 2px;
   background: var(--mp-face);
   box-shadow:
@@ -338,7 +338,7 @@
 .mspaint-size {
   display: block;
   width: 100%;
-  height: 10px;
+  height: 13px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -374,12 +374,12 @@
   padding: 0 1px;
 }
 .mspaint-actions button {
-  height: 20px;
+  height: 24px;
   padding: 0;
   border: 0;
   background: var(--mp-face);
   font-family: inherit;
-  font-size: 10px;
+  font-size: 11px;
   cursor: pointer;
   box-shadow:
     inset -1px -1px 0 var(--mp-dark),
