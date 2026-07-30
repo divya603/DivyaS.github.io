@@ -28,8 +28,18 @@ body:not(.paint-shell) {
   color: var(--site-text);
 }
 
+/* ---- Background mandalas (assets/js/mandala.js) ---- */
+#mandala-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 /* ---- Centered shell: nav and content share one column ---- */
 .site-shell {
+  position: relative;
+  z-index: 1;
   max-width: 812px;
   margin: 0 auto;
   padding: 2.6rem 1.5rem 3rem;
