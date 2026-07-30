@@ -1,15 +1,19 @@
-/* Background mandalas.
+/* Background mandalas, henna/mehndi style.
    Two mandalas grow outward from the bottom-left and top-right corners of the
    viewport over ~90 seconds: deep ginger at the centre warming to sunset gold
    at the rim.
 
-   Every band is a whole-number multiple of one base symmetry, so the spokes
-   line up across the whole figure -- that radial alignment, plus nested
-   motifs (petals inside petals, arches holding petals), is what makes it read
-   as a mandala rather than a stack of unrelated pattern rings.
+   The vocabulary is deliberately all curves -- coiled spirals, veined leaves,
+   paisley teardrops, lobed blooms and lacy scallops. No straight radial rules
+   or sharp zigzags, which is what makes this style read as drawn ornament
+   rather than geometry. Every band is a whole-number multiple of one base
+   symmetry so the spokes line up across the figure.
 
-   Completed bands are committed to an offscreen canvas so each frame only
-   redraws the one band still growing. Progress is stored per browser tab, so
+   Motifs are drawn in a local frame (origin on the band's inner edge, +X
+   pointing radially outward), which is what keeps the curve maths legible.
+
+   Finished bands are committed to an offscreen canvas so each frame only
+   redraws the band still growing. Progress is stored per browser tab, so
    moving between pages continues the animation; a fresh visit starts over. */
 (function () {
   'use strict';
@@ -31,32 +35,30 @@
 
   /* Band schedule, innermost first. `w` is a relative width (normalised to the
      radius below) and `m` multiplies the base symmetry. Wide ornate bands
-     alternate with narrow bands of fine detail, as in traditional mandalas. */
+     alternate with narrow bands of beadwork and lace. */
   var BANDS = [
-    { type: 'rosette', w: 0.95, m: 2 },
-    { type: 'ring',    w: 0.13 },
-    { type: 'beads',   w: 0.28, m: 3 },
-    { type: 'ring',    w: 0.11 },
-    { type: 'lotus',   w: 1.30, m: 2 },
-    { type: 'ring',    w: 0.12 },
-    { type: 'saw',     w: 0.32, m: 6 },
-    { type: 'ring',    w: 0.11 },
-    { type: 'arcade',  w: 1.05, m: 3 },
-    { type: 'beads',   w: 0.26, m: 6 },
-    { type: 'ring',    w: 0.11 },
-    { type: 'fan',     w: 1.40, m: 3 },
-    { type: 'ring',    w: 0.11 },
-    { type: 'comb',    w: 0.34, m: 8 },
-    { type: 'ring',    w: 0.11 },
-    { type: 'lotus',   w: 1.50, m: 4 },
-    { type: 'scallop', w: 0.46, m: 6 },
-    { type: 'ring',    w: 0.11 },
-    { type: 'beads',   w: 0.24, m: 8 },
-    { type: 'arcade',  w: 1.20, m: 4 },
-    { type: 'ring',    w: 0.11 },
-    { type: 'fan',     w: 1.55, m: 4 },
-    { type: 'saw',     w: 0.36, m: 8 },
-    { type: 'ring',    w: 0.10 }
+    { type: 'rosette', w: 0.80, m: 2 },
+    { type: 'dots',    w: 0.20, m: 3 },
+    { type: 'bloom',   w: 1.05, m: 3 },
+    { type: 'lace',    w: 0.30, m: 6 },
+    { type: 'ring',    w: 0.10 },
+    { type: 'leaf',    w: 1.25, m: 4 },
+    { type: 'dots',    w: 0.22, m: 8 },
+    { type: 'curl',    w: 0.85, m: 5 },
+    { type: 'lace',    w: 0.32, m: 9 },
+    { type: 'ring',    w: 0.10 },
+    { type: 'paisley', w: 1.35, m: 6 },
+    { type: 'dots',    w: 0.22, m: 11 },
+    { type: 'bloom',   w: 1.30, m: 8 },
+    { type: 'lace',    w: 0.34, m: 13 },
+    { type: 'curl',    w: 0.95, m: 9 },
+    { type: 'ring',    w: 0.10 },
+    { type: 'leaf',    w: 1.55, m: 10 },
+    { type: 'dots',    w: 0.22, m: 15 },
+    { type: 'paisley', w: 1.45, m: 11 },
+    { type: 'lace',    w: 0.36, m: 17 },
+    { type: 'bloom',   w: 1.50, m: 12 },
+    { type: 'lace',    w: 0.34, m: 20 }
   ];
 
   /* Deep ginger at the centre, sunset orange through the middle, warm gold at
@@ -111,114 +113,154 @@
     for (i = 0; i < BANDS.length; i++) {
       var spec = BANDS[i];
       var r = prev + radius * (spec.w / total);
-      out.push({
-        type: spec.type,
-        r0: prev,
-        r1: r,
-        count: SYM * (spec.m || 1)
-      });
+      out.push({ type: spec.type, r0: prev, r1: r, count: SYM * (spec.m || 1) });
       prev = r;
     }
     return out;
   }
 
-  /* ---------- motifs ---------- */
+  /* Run fn in a frame whose origin sits at (radius, angle) with +X pointing
+     radially outward, so motifs can be written as plain 2-D curves. */
+  function frame(c, cx, cy, angle, r, fn, arg) {
+    c.save();
+    c.translate(px(cx, r, angle), py(cy, r, angle));
+    c.rotate(angle);
+    fn(c, arg);
+    c.restore();
+  }
 
-  function petalPath(c, cx, cy, angle, r0, r1, halfWidth) {
-    var mid = r0 + (r1 - r0) * 0.5;
+  function dotAt(c, x, y, r) {
     c.beginPath();
-    c.moveTo(px(cx, r0, angle), py(cy, r0, angle));
-    c.quadraticCurveTo(
-      px(cx, mid, angle - halfWidth), py(cy, mid, angle - halfWidth),
-      px(cx, r1, angle), py(cy, r1, angle));
-    c.quadraticCurveTo(
-      px(cx, mid, angle + halfWidth), py(cy, mid, angle + halfWidth),
-      px(cx, r0, angle), py(cy, r0, angle));
+    c.arc(x, y, r, 0, TAU);
     c.stroke();
   }
 
-  /* Petal within petal within petal — the layered look of the reference. */
-  function lotus(c, cx, cy, angle, r0, r1, halfWidth, layers) {
-    var band = r1 - r0;
-    for (var i = 0; i < layers; i++) {
-      var inset = i * 0.13;
-      petalPath(c, cx, cy, angle,
-        r0 + band * inset,
-        r1 - band * inset * 0.72,
-        halfWidth * (1 - i * 0.26));
+  /* ---------- motifs (local frame: +X outward) ---------- */
+
+  /* A rounded flower petal with an inner lobe and a pair of seed dots. */
+  function bloom(c, o) {
+    var L = o.L, w = o.w;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.bezierCurveTo(L * 0.20, -w * 0.75, L * 0.86, -w * 0.80, L, 0);
+    c.bezierCurveTo(L * 0.86, w * 0.80, L * 0.20, w * 0.75, 0, 0);
+    c.stroke();
+
+    c.beginPath();
+    c.moveTo(L * 0.18, 0);
+    c.bezierCurveTo(L * 0.36, -w * 0.44, L * 0.78, -w * 0.46, L * 0.88, 0);
+    c.bezierCurveTo(L * 0.78, w * 0.46, L * 0.36, w * 0.44, L * 0.18, 0);
+    c.stroke();
+
+    if (L > 22) {
+      dotAt(c, L * 0.42, 0, Math.min(2, L * 0.045));
+      dotAt(c, L * 0.66, 0, Math.min(1.5, L * 0.032));
     }
-    var dotR = r0 + band * 0.14;
-    if (band > 14) {
+  }
+
+  /* A pointed leaf with a midrib and curved veins sweeping toward the tip. */
+  function leaf(c, o) {
+    var L = o.L, w = o.w;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.quadraticCurveTo(L * 0.34, -w * 0.92, L, 0);
+    c.quadraticCurveTo(L * 0.34, w * 0.92, 0, 0);
+    c.stroke();
+
+    c.beginPath();
+    c.moveTo(L * 0.06, 0);
+    c.lineTo(L * 0.94, 0);
+    c.stroke();
+
+    if (L < 26) return;
+    for (var i = 1; i <= 4; i++) {
+      var t = 0.12 + i * 0.17;
+      var x = L * t;
+      var reach = w * (1 - Math.abs(t - 0.4)) * 0.7;
       c.beginPath();
-      c.arc(px(cx, dotR, angle), py(cy, dotR, angle), Math.min(2.2, band * 0.05), 0, TAU);
+      c.moveTo(x, 0);
+      c.quadraticCurveTo(x + L * 0.09, -reach * 0.55, x + L * 0.15, -reach);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(x, 0);
+      c.quadraticCurveTo(x + L * 0.09, reach * 0.55, x + L * 0.15, reach);
       c.stroke();
     }
   }
 
-  /* A petal with ribs radiating inside it. */
-  function fan(c, cx, cy, angle, r0, r1, halfWidth) {
-    petalPath(c, cx, cy, angle, r0, r1, halfWidth);
-    petalPath(c, cx, cy, angle, r0 + (r1 - r0) * 0.16, r1 - (r1 - r0) * 0.12, halfWidth * 0.7);
-    var ribs = 3;
-    for (var i = 1; i <= ribs; i++) {
-      var t = i / (ribs + 1);
-      var a = angle + (t - 0.5) * halfWidth * 1.15;
-      c.beginPath();
-      c.moveTo(px(cx, r0 + (r1 - r0) * 0.30, a), py(cy, r0 + (r1 - r0) * 0.30, a));
-      c.lineTo(px(cx, r1 - (r1 - r0) * 0.20, a), py(cy, r1 - (r1 - r0) * 0.20, a));
-      c.stroke();
+  /* A teardrop that hooks over at the tip, with a dotted throat. */
+  function paisley(c, o) {
+    var L = o.L, w = o.w;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.bezierCurveTo(L * 0.18, -w * 0.85, L * 0.70, -w * 0.95, L * 0.86, -w * 0.28);
+    c.bezierCurveTo(L * 0.98, w * 0.10, L * 0.80, w * 0.42, L * 0.62, w * 0.18);
+    c.stroke();
+
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.bezierCurveTo(L * 0.22, w * 0.80, L * 0.60, w * 0.72, L * 0.62, w * 0.18);
+    c.stroke();
+
+    c.beginPath();
+    c.moveTo(L * 0.16, -w * 0.08);
+    c.bezierCurveTo(L * 0.34, -w * 0.50, L * 0.64, -w * 0.54, L * 0.72, -w * 0.16);
+    c.stroke();
+
+    if (L > 26) {
+      dotAt(c, L * 0.34, w * 0.14, Math.min(1.6, L * 0.035));
+      dotAt(c, L * 0.50, w * 0.20, Math.min(1.4, L * 0.030));
     }
   }
 
-  /* An arch with a small petal sitting inside it. */
-  function arcade(c, cx, cy, angle, step, r0, r1) {
-    var base = r0 + (r1 - r0) * 0.10;
-    var a0 = angle - step * 0.5;
-    var a1 = angle + step * 0.5;
+  /* The henna signature: a stem that coils into a spiral. Drawn as a mirrored
+     pair so each spoke reads as a symmetric flourish. */
+  function curl(c, o) {
+    var L = o.L, w = o.w;
+    var turns = 1.6, steps = 20;
+
+    for (var s = -1; s <= 1; s += 2) {
+      var hubX = L * 0.68;
+      var hubY = s * w * 0.44;
+      var coil = Math.min(L * 0.30, w * 0.52);
+
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.bezierCurveTo(L * 0.20, s * w * 0.20, L * 0.44, s * w * 0.58,
+                      hubX, hubY + s * coil);
+      for (var i = 0; i <= steps; i++) {
+        var t = i / steps;
+        var th = t * turns * TAU;
+        var rr = coil * (1 - t * 0.85);
+        c.lineTo(hubX - s * rr * Math.sin(th), hubY + s * rr * Math.cos(th));
+      }
+      c.stroke();
+    }
+
     c.beginPath();
-    c.moveTo(px(cx, base, a0), py(cy, base, a0));
-    c.quadraticCurveTo(
-      px(cx, r1 * 1.005, angle), py(cy, r1 * 1.005, angle),
-      px(cx, base, a1), py(cy, base, a1));
+    c.moveTo(L * 0.28, 0);
+    c.quadraticCurveTo(L * 0.54, -w * 0.18, L * 0.82, 0);
+    c.quadraticCurveTo(L * 0.54, w * 0.18, L * 0.28, 0);
     c.stroke();
-    petalPath(c, cx, cy, angle,
-      r0 + (r1 - r0) * 0.22, r1 - (r1 - r0) * 0.26, step * 0.26);
+    if (L > 24) dotAt(c, L * 0.55, 0, Math.min(1.6, L * 0.04));
   }
 
-  function rosette(c, cx, cy, angle, r0, r1, halfWidth) {
-    petalPath(c, cx, cy, angle, r0, r1, halfWidth);
-    petalPath(c, cx, cy, angle, r0 + (r1 - r0) * 0.2, r1 - (r1 - r0) * 0.22, halfWidth * 0.6);
-  }
 
-  function scallop(c, cx, cy, angle, step, r0, r1) {
-    var base = r0 + (r1 - r0) * 0.28;
-    var a0 = angle - step * 0.5;
-    var a1 = angle + step * 0.5;
+  /* A small rounded flower for the very centre. */
+  function rosette(c, o) {
+    var L = o.L, w = o.w;
     c.beginPath();
-    c.moveTo(px(cx, base, a0), py(cy, base, a0));
-    c.quadraticCurveTo(
-      px(cx, r1, angle), py(cy, r1, angle),
-      px(cx, base, a1), py(cy, base, a1));
+    c.moveTo(0, 0);
+    c.bezierCurveTo(L * 0.26, -w * 0.85, L * 0.80, -w * 0.70, L, 0);
+    c.bezierCurveTo(L * 0.80, w * 0.70, L * 0.26, w * 0.85, 0, 0);
     c.stroke();
+    if (L > 16) dotAt(c, L * 0.55, 0, Math.min(1.8, L * 0.06));
   }
 
-  function saw(c, cx, cy, angle, step, r0, r1) {
-    var base = r0 + (r1 - r0) * 0.18;
-    var a0 = angle - step * 0.5;
-    var a1 = angle + step * 0.5;
+  /* A semicircular bump; a ring of them makes a lace edge. */
+  function laceBump(c, o) {
     c.beginPath();
-    c.moveTo(px(cx, base, a0), py(cy, base, a0));
-    c.lineTo(px(cx, r1, angle), py(cy, r1, angle));
-    c.lineTo(px(cx, base, a1), py(cy, base, a1));
-    c.stroke();
-  }
-
-  function comb(c, cx, cy, angle, r0, r1) {
-    var a = r0 + (r1 - r0) * 0.15;
-    var b = r0 + (r1 - r0) * 0.88;
-    c.beginPath();
-    c.moveTo(px(cx, a, angle), py(cy, a, angle));
-    c.lineTo(px(cx, b, angle), py(cy, b, angle));
+    c.arc(0, 0, o.bump, -Math.PI / 2, Math.PI / 2);
     c.stroke();
   }
 
@@ -231,18 +273,20 @@
 
     c.strokeStyle = colorAt(f, alpha);
     c.lineWidth = f < 0.35 ? 1.15 : 1;
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
 
     var grown = band.r0 + (band.r1 - band.r0) * appear;
     var step = TAU / band.count;
-    /* Every second ornate band is offset half a step so petals interlock
-       with the band beneath instead of stacking in identical spokes. */
+    /* Offset alternate ornate bands by half a step so motifs interlock with
+       the band beneath instead of stacking into rigid spokes. */
     var offset = phase + (index % 2 ? step * 0.5 : 0);
 
     if (band.type === 'ring') {
       c.beginPath();
       c.arc(cx, cy, grown, 0, TAU);
       c.stroke();
-      var inner = band.r0 + (grown - band.r0) * 0.55;
+      var inner = band.r0 + (grown - band.r0) * 0.5;
       if (inner > 3) {
         c.beginPath();
         c.arc(cx, cy, inner, 0, TAU);
@@ -251,36 +295,35 @@
       return;
     }
 
+    var L = grown - band.r0;
+    if (L <= 0.5) return;
+    var mid = (band.r0 + grown) * 0.5;
+    var halfArc = mid * step * 0.5;
+
     for (var k = 0; k < band.count; k++) {
       var angle = offset + k * step;
       switch (band.type) {
+        case 'bloom':
+          frame(c, cx, cy, angle, band.r0, bloom, { L: L, w: halfArc * 0.95 });
+          break;
+        case 'leaf':
+          frame(c, cx, cy, angle, band.r0, leaf, { L: L, w: halfArc * 0.80 });
+          break;
+        case 'paisley':
+          frame(c, cx, cy, angle, band.r0, paisley, { L: L, w: halfArc * 0.95 });
+          break;
+        case 'curl':
+          frame(c, cx, cy, angle, band.r0, curl, { L: L, w: halfArc * 1.0 });
+          break;
         case 'rosette':
-          rosette(c, cx, cy, angle, band.r0, grown, step * 0.60);
+          frame(c, cx, cy, angle, band.r0, rosette, { L: L, w: halfArc * 0.9 });
           break;
-        case 'lotus':
-          lotus(c, cx, cy, angle, band.r0, grown, step * 0.62, 3);
+        case 'lace':
+          frame(c, cx, cy, angle, mid, laceBump, { bump: Math.min(L * 0.5, halfArc) });
           break;
-        case 'fan':
-          fan(c, cx, cy, angle, band.r0, grown, step * 0.60);
-          break;
-        case 'arcade':
-          arcade(c, cx, cy, angle, step, band.r0, grown);
-          break;
-        case 'scallop':
-          scallop(c, cx, cy, angle, step, band.r0, grown);
-          break;
-        case 'saw':
-          saw(c, cx, cy, angle, step, band.r0, grown);
-          break;
-        case 'comb':
-          comb(c, cx, cy, angle, band.r0, grown);
-          break;
-        case 'beads':
-          var br = (band.r0 + grown) * 0.5;
-          c.beginPath();
-          c.arc(px(cx, br, angle), py(cy, br, angle),
-                Math.max(0.9, (band.r1 - band.r0) * 0.24 * appear), 0, TAU);
-          c.stroke();
+        case 'dots':
+          dotAt(c, px(cx, mid, angle), py(cy, mid, angle),
+                Math.max(0.9, L * 0.26 * appear));
           break;
       }
     }
@@ -309,7 +352,7 @@
     }
   }
 
-  /* ---------- frame ---------- */
+  /* ---------- frame loop ---------- */
 
   function progressNow() {
     if (reduceMotion) return 1;
