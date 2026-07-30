@@ -7,8 +7,8 @@
 
 :root {
   --site-bg: #faf8f8;
-  --site-text: #4e4e4e;
-  --site-heading: #2b2b2b;
+  --site-text: #0d0d0d;
+  --site-heading: #000000;
   --site-link: #284b63;
   --site-meta: #b0b0b0;
   --site-rule: #e6e2e2;
@@ -16,8 +16,8 @@
 
 [data-theme="dark"] {
   --site-bg: #1a1a1a;
-  --site-text: #cfcfcf;
-  --site-heading: #f0f0f0;
+  --site-text: #ededed;
+  --site-heading: #ffffff;
   --site-link: #8fb8d4;
   --site-meta: #7d7d7d;
   --site-rule: #333333;
@@ -138,7 +138,7 @@ body:not(.paint-shell) {
 }
 .site-content,
 .site-nav {
-  font-weight: 300;
+  font-weight: 400;
 }
 .site-content h1,
 .site-content h2,
@@ -146,18 +146,19 @@ body:not(.paint-shell) {
 .site-content h4,
 .site-content h5,
 .site-content h6 {
-  font-weight: 300;
+  font-weight: 400;
   color: var(--site-heading);
 }
 .site-content strong,
 .site-content b {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .site-content .page__content p,
 .site-content .page__content li {
   font-size: 0.95rem;
   line-height: 1.75;
+  font-weight: 400;
   color: var(--site-text);
 }
 
