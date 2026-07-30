@@ -131,15 +131,27 @@ layout: compress
     </div>
     {% else %}
 
-    {% include masthead.html %}
+    <div class="site-shell">
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="{{ base_path }}/">Home</a>
+        {% for link in site.data.navigation.main %}
+          {% if link.url contains 'http' %}{% assign domain = '' %}{% else %}{% assign domain = base_path %}{% endif %}
+          <a href="{{ domain }}{{ link.url }}">{{ link.title }}</a>
+        {% endfor %}
+        <span class="site-nav-spacer"></span>
+        <button id="theme-toggle" class="site-theme-toggle" aria-label="Toggle theme">
+          <i class="fas fa-sun" id="theme-icon"></i>
+        </button>
+      </nav>
 
-    <div class="site-content">
-      {{ content }}
-      <div class="page__footer">
-        <footer>
-          {% include footer/custom.html %}
-          {% include footer.html %}
-        </footer>
+      <div class="site-content">
+        {{ content }}
+        <div class="page__footer">
+          <footer>
+            {% include footer/custom.html %}
+            {% include footer.html %}
+          </footer>
+        </div>
       </div>
     </div>
 

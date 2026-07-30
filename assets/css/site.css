@@ -1,0 +1,202 @@
+/* ==========================================================================
+   Site layout & typography
+   A single narrow centered column with the nav above the content. Applies in
+   both normal mode and MS Paint mode (see paint.css), because .site-content
+   wraps the page content in both.
+   ========================================================================== */
+
+:root {
+  --site-bg: #faf8f8;
+  --site-text: #4e4e4e;
+  --site-heading: #2b2b2b;
+  --site-link: #284b63;
+  --site-meta: #b0b0b0;
+  --site-rule: #e6e2e2;
+}
+
+[data-theme="dark"] {
+  --site-bg: #1a1a1a;
+  --site-text: #cfcfcf;
+  --site-heading: #f0f0f0;
+  --site-link: #8fb8d4;
+  --site-meta: #7d7d7d;
+  --site-rule: #333333;
+}
+
+body:not(.paint-shell) {
+  background: var(--site-bg);
+  color: var(--site-text);
+}
+
+/* ---- Centered shell: nav and content share one column ---- */
+.site-shell {
+  max-width: 812px;
+  margin: 0 auto;
+  padding: 2.6rem 1.5rem 3rem;
+}
+
+/* ---- Nav: links left, theme toggle far right ---- */
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 2.4rem;
+  margin-bottom: 2rem;
+}
+.site-nav a {
+  color: var(--site-text);
+  font-weight: 500;
+  text-decoration: none;
+}
+.site-nav a:hover,
+.site-nav a:focus-visible {
+  color: var(--site-heading);
+}
+.site-nav-spacer {
+  flex: 1;
+}
+.site-theme-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0.2rem;
+  color: var(--site-text);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.site-theme-toggle:hover {
+  color: var(--site-heading);
+}
+
+/* ==========================================================================
+   Content column: the theme floats .page right to leave room for the author
+   sidebar we removed — undo those grid offsets and fill the shell instead
+   ========================================================================== */
+.site-content #main {
+  max-width: none;
+  margin: 0 auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+.site-content .page,
+.site-content .archive {
+  float: none;
+  width: 100%;
+  max-width: none;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* The theme's "sticky footer fix" pins the footer with position:absolute,
+   which floats it mid-page — restore normal flow */
+.site-content .page__footer {
+  position: static;
+  float: none;
+  margin-top: 3.5rem;
+  background: transparent;
+  border-top: 1px solid var(--site-rule);
+  color: var(--site-meta);
+}
+.site-content .page__footer a {
+  color: var(--site-meta);
+}
+
+/* ==========================================================================
+   Typography: Roboto Mono Light throughout (loaded in head/custom.html)
+   ========================================================================== */
+.site-content,
+.site-nav,
+.site-content h1,
+.site-content h2,
+.site-content h3,
+.site-content h4,
+.site-content h5,
+.site-content h6,
+.site-content p,
+.site-content li,
+.site-content dl,
+.site-content td,
+.site-content th,
+.site-content input,
+.site-content textarea,
+.site-content .page__lead,
+.site-content .page__footer-copyright,
+.site-content .archive__item-title,
+.site-content .archive__item-excerpt {
+  font-family: "Roboto Mono", "Courier New", monospace;
+}
+.site-content,
+.site-nav {
+  font-weight: 300;
+}
+.site-content h1,
+.site-content h2,
+.site-content h3,
+.site-content h4,
+.site-content h5,
+.site-content h6 {
+  font-weight: 300;
+  color: var(--site-heading);
+}
+.site-content strong,
+.site-content b {
+  font-weight: 500;
+}
+
+.site-content .page__content p,
+.site-content .page__content li {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--site-text);
+}
+
+/* Links: colored and semi-bold rather than underlined, like the reference */
+.site-content .page__content a {
+  color: var(--site-link);
+  font-weight: 500;
+  text-decoration: none;
+}
+.site-content .page__content a:hover,
+.site-content .page__content a:focus-visible {
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Homepage hero: name above, intro text left, portrait floated right
+   ========================================================================== */
+.site-content .home-name {
+  font-family: "Playfair Display", Georgia, serif; /* the name only */
+  font-weight: 800;
+  font-size: 3rem;
+  line-height: 1.05;
+  color: var(--site-heading);
+  margin: 0 0 1.6rem;
+}
+
+.home-portrait {
+  float: right;
+  width: 300px;
+  max-width: 40%;
+  margin: 0.35em 0 1.2em 1.8em;
+  border-radius: 0;
+}
+
+@media (max-width: 600px) {
+  .site-shell {
+    padding: 1.6rem 1.1rem 2.5rem;
+  }
+  .site-nav {
+    gap: 1.4rem;
+  }
+  .site-content .home-name {
+    font-size: 2.2rem;
+  }
+  .home-portrait {
+    float: none;
+    display: block;
+    width: 70%;
+    max-width: 280px;
+    margin: 0 auto 1.4em;
+  }
+}
