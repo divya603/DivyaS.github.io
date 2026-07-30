@@ -1,11 +1,16 @@
 /* Background mandalas.
    Two mandalas grow outward from the bottom-left and top-right corners of the
-   viewport, ring by ring, over ~90 seconds: deep ginger at the centre warming
-   to sunset gold at the rim, in dense concentric bands of petals, beadwork,
-   sawtooth and hatching.
+   viewport over ~90 seconds: deep ginger at the centre warming to sunset gold
+   at the rim.
 
-   Progress is stored per browser tab, so moving between pages continues the
-   animation instead of restarting it; a fresh visit starts over. */
+   Every band is a whole-number multiple of one base symmetry, so the spokes
+   line up across the whole figure -- that radial alignment, plus nested
+   motifs (petals inside petals, arches holding petals), is what makes it read
+   as a mandala rather than a stack of unrelated pattern rings.
+
+   Completed bands are committed to an offscreen canvas so each frame only
+   redraws the one band still growing. Progress is stored per browser tab, so
+   moving between pages continues the animation; a fresh visit starts over. */
 (function () {
   'use strict';
 
@@ -13,21 +18,45 @@
   if (!canvas || !canvas.getContext) return;
 
   var ctx = canvas.getContext('2d');
+  var cache = document.createElement('canvas');
+  var cctx = cache.getContext('2d');
 
-  var DURATION = 90000;   // ms for one mandala to finish drawing
-  var STAGGER = 0.08;     // second mandala trails the first by this fraction
+  var DURATION = 90000;   // ms to grow from the opening state to full size
   var MAX_ALPHA = 0.85;   // ink strength at the centre
-  var FALLOFF = 0.8;      // gentle: the line-work stays visible out to the rim
-  var GROW_BAND = 0.10;   // fraction of the radius a ring takes to fade in
-  var RING_COUNT = 22;
+  var FALLOFF = 0.8;      // gentle: line-work stays visible out to the rim
+  var GROW_BAND = 0.085;  // fraction of the radius a band takes to fade in
+  var OPENING_BANDS = 5;  // bands already drawn when the page first opens
+  var SYM = 8;            // base symmetry; every band is a multiple of this
   var STORAGE_KEY = 'mandala-start';
 
-  /* Motifs cycled outward. Mixing fine beadwork and sawtooth between the petal
-     bands is what gives the reference artwork its density. */
-  var CYCLE = [
-    'petal', 'beads', 'petalVein', 'ring', 'saw', 'ring', 'petalVein',
-    'comb', 'ring', 'beads', 'scallop', 'petalVein', 'ring', 'saw',
-    'petal', 'beads', 'ring', 'comb', 'petalVein', 'scallop', 'ring', 'beads'
+  /* Band schedule, innermost first. `w` is a relative width (normalised to the
+     radius below) and `m` multiplies the base symmetry. Wide ornate bands
+     alternate with narrow bands of fine detail, as in traditional mandalas. */
+  var BANDS = [
+    { type: 'rosette', w: 0.95, m: 2 },
+    { type: 'ring',    w: 0.13 },
+    { type: 'beads',   w: 0.28, m: 3 },
+    { type: 'ring',    w: 0.11 },
+    { type: 'lotus',   w: 1.30, m: 2 },
+    { type: 'ring',    w: 0.12 },
+    { type: 'saw',     w: 0.32, m: 6 },
+    { type: 'ring',    w: 0.11 },
+    { type: 'arcade',  w: 1.05, m: 3 },
+    { type: 'beads',   w: 0.26, m: 6 },
+    { type: 'ring',    w: 0.11 },
+    { type: 'fan',     w: 1.40, m: 3 },
+    { type: 'ring',    w: 0.11 },
+    { type: 'comb',    w: 0.34, m: 8 },
+    { type: 'ring',    w: 0.11 },
+    { type: 'lotus',   w: 1.50, m: 4 },
+    { type: 'scallop', w: 0.46, m: 6 },
+    { type: 'ring',    w: 0.11 },
+    { type: 'beads',   w: 0.24, m: 8 },
+    { type: 'arcade',  w: 1.20, m: 4 },
+    { type: 'ring',    w: 0.11 },
+    { type: 'fan',     w: 1.55, m: 4 },
+    { type: 'saw',     w: 0.36, m: 8 },
+    { type: 'ring',    w: 0.10 }
   ];
 
   /* Deep ginger at the centre, sunset orange through the middle, warm gold at
@@ -44,7 +73,9 @@
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var W = 0, H = 0, R = 0;
-  var rings = [];
+  var bands = [];
+  var openingProgress = 0;
+  var doneA = 0, doneB = 0;      // bands already committed to the cache
   var startedAt = null;
   var rafId = null;
   var lastPaint = 0;
@@ -71,23 +102,21 @@
     return t * t * (3 - 2 * t);
   }
 
-  /* Repeat counts rise with radius so every band stays equally dense instead
-     of the outer rings looking stretched and empty. Fine motifs get packed
-     tighter still. */
-  var TIGHT = { beads: 0.34, saw: 0.42, comb: 0.30, scallop: 0.55 };
+  function buildBands(radius) {
+    var total = 0, i;
+    for (i = 0; i < BANDS.length; i++) total += BANDS[i].w;
 
-  function buildRings(radius) {
     var out = [];
     var prev = 0;
-    for (var i = 0; i < RING_COUNT; i++) {
-      var r = radius * Math.pow((i + 1) / RING_COUNT, 1.04);
-      var band = r - prev;
-      var mid = (r + prev) * 0.5;
-      var type = CYCLE[i % CYCLE.length];
-      var spacing = band * (TIGHT[type] || 1.15);
-      var count = Math.round(TAU * mid / Math.max(spacing, 4));
-      count = Math.max(8, Math.min(120, Math.round(count / 4) * 4));
-      out.push({ r0: prev, r1: r, count: count, type: type });
+    for (i = 0; i < BANDS.length; i++) {
+      var spec = BANDS[i];
+      var r = prev + radius * (spec.w / total);
+      out.push({
+        type: spec.type,
+        r0: prev,
+        r1: r,
+        count: SYM * (spec.m || 1)
+      });
       prev = r;
     }
     return out;
@@ -95,153 +124,217 @@
 
   /* ---------- motifs ---------- */
 
-  function petal(cx, cy, angle, r0, r1, halfWidth, vein) {
+  function petalPath(c, cx, cy, angle, r0, r1, halfWidth) {
     var mid = r0 + (r1 - r0) * 0.5;
-    ctx.beginPath();
-    ctx.moveTo(px(cx, r0, angle), py(cy, r0, angle));
-    ctx.quadraticCurveTo(
+    c.beginPath();
+    c.moveTo(px(cx, r0, angle), py(cy, r0, angle));
+    c.quadraticCurveTo(
       px(cx, mid, angle - halfWidth), py(cy, mid, angle - halfWidth),
       px(cx, r1, angle), py(cy, r1, angle));
-    ctx.quadraticCurveTo(
+    c.quadraticCurveTo(
       px(cx, mid, angle + halfWidth), py(cy, mid, angle + halfWidth),
       px(cx, r0, angle), py(cy, r0, angle));
-    ctx.stroke();
+    c.stroke();
+  }
 
-    if (vein) {
-      var vr0 = r0 + (r1 - r0) * 0.24;
-      var vr1 = r0 + (r1 - r0) * 0.78;
-      var vw = halfWidth * 0.40;
-      var vmid = (vr0 + vr1) * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(px(cx, vr0, angle), py(cy, vr0, angle));
-      ctx.quadraticCurveTo(
-        px(cx, vmid, angle - vw), py(cy, vmid, angle - vw),
-        px(cx, vr1, angle), py(cy, vr1, angle));
-      ctx.quadraticCurveTo(
-        px(cx, vmid, angle + vw), py(cy, vmid, angle + vw),
-        px(cx, vr0, angle), py(cy, vr0, angle));
-      ctx.stroke();
+  /* Petal within petal within petal — the layered look of the reference. */
+  function lotus(c, cx, cy, angle, r0, r1, halfWidth, layers) {
+    var band = r1 - r0;
+    for (var i = 0; i < layers; i++) {
+      var inset = i * 0.13;
+      petalPath(c, cx, cy, angle,
+        r0 + band * inset,
+        r1 - band * inset * 0.72,
+        halfWidth * (1 - i * 0.26));
+    }
+    var dotR = r0 + band * 0.14;
+    if (band > 14) {
+      c.beginPath();
+      c.arc(px(cx, dotR, angle), py(cy, dotR, angle), Math.min(2.2, band * 0.05), 0, TAU);
+      c.stroke();
     }
   }
 
-  function scallop(cx, cy, angle, step, r0, r1) {
-    var base = r0 + (r1 - r0) * 0.30;
+  /* A petal with ribs radiating inside it. */
+  function fan(c, cx, cy, angle, r0, r1, halfWidth) {
+    petalPath(c, cx, cy, angle, r0, r1, halfWidth);
+    petalPath(c, cx, cy, angle, r0 + (r1 - r0) * 0.16, r1 - (r1 - r0) * 0.12, halfWidth * 0.7);
+    var ribs = 3;
+    for (var i = 1; i <= ribs; i++) {
+      var t = i / (ribs + 1);
+      var a = angle + (t - 0.5) * halfWidth * 1.15;
+      c.beginPath();
+      c.moveTo(px(cx, r0 + (r1 - r0) * 0.30, a), py(cy, r0 + (r1 - r0) * 0.30, a));
+      c.lineTo(px(cx, r1 - (r1 - r0) * 0.20, a), py(cy, r1 - (r1 - r0) * 0.20, a));
+      c.stroke();
+    }
+  }
+
+  /* An arch with a small petal sitting inside it. */
+  function arcade(c, cx, cy, angle, step, r0, r1) {
+    var base = r0 + (r1 - r0) * 0.10;
     var a0 = angle - step * 0.5;
     var a1 = angle + step * 0.5;
-    ctx.beginPath();
-    ctx.moveTo(px(cx, base, a0), py(cy, base, a0));
-    ctx.quadraticCurveTo(
+    c.beginPath();
+    c.moveTo(px(cx, base, a0), py(cy, base, a0));
+    c.quadraticCurveTo(
+      px(cx, r1 * 1.005, angle), py(cy, r1 * 1.005, angle),
+      px(cx, base, a1), py(cy, base, a1));
+    c.stroke();
+    petalPath(c, cx, cy, angle,
+      r0 + (r1 - r0) * 0.22, r1 - (r1 - r0) * 0.26, step * 0.26);
+  }
+
+  function rosette(c, cx, cy, angle, r0, r1, halfWidth) {
+    petalPath(c, cx, cy, angle, r0, r1, halfWidth);
+    petalPath(c, cx, cy, angle, r0 + (r1 - r0) * 0.2, r1 - (r1 - r0) * 0.22, halfWidth * 0.6);
+  }
+
+  function scallop(c, cx, cy, angle, step, r0, r1) {
+    var base = r0 + (r1 - r0) * 0.28;
+    var a0 = angle - step * 0.5;
+    var a1 = angle + step * 0.5;
+    c.beginPath();
+    c.moveTo(px(cx, base, a0), py(cy, base, a0));
+    c.quadraticCurveTo(
       px(cx, r1, angle), py(cy, r1, angle),
       px(cx, base, a1), py(cy, base, a1));
-    ctx.stroke();
+    c.stroke();
   }
 
-  function saw(cx, cy, angle, step, r0, r1) {
-    var base = r0 + (r1 - r0) * 0.22;
+  function saw(c, cx, cy, angle, step, r0, r1) {
+    var base = r0 + (r1 - r0) * 0.18;
     var a0 = angle - step * 0.5;
     var a1 = angle + step * 0.5;
-    ctx.beginPath();
-    ctx.moveTo(px(cx, base, a0), py(cy, base, a0));
-    ctx.lineTo(px(cx, r1, angle), py(cy, r1, angle));
-    ctx.lineTo(px(cx, base, a1), py(cy, base, a1));
-    ctx.stroke();
+    c.beginPath();
+    c.moveTo(px(cx, base, a0), py(cy, base, a0));
+    c.lineTo(px(cx, r1, angle), py(cy, r1, angle));
+    c.lineTo(px(cx, base, a1), py(cy, base, a1));
+    c.stroke();
   }
 
-  function comb(cx, cy, angle, r0, r1) {
-    var a = r0 + (r1 - r0) * 0.18;
-    var b = r0 + (r1 - r0) * 0.86;
-    ctx.beginPath();
-    ctx.moveTo(px(cx, a, angle), py(cy, a, angle));
-    ctx.lineTo(px(cx, b, angle), py(cy, b, angle));
-    ctx.stroke();
+  function comb(c, cx, cy, angle, r0, r1) {
+    var a = r0 + (r1 - r0) * 0.15;
+    var b = r0 + (r1 - r0) * 0.88;
+    c.beginPath();
+    c.moveTo(px(cx, a, angle), py(cy, a, angle));
+    c.lineTo(px(cx, b, angle), py(cy, b, angle));
+    c.stroke();
   }
 
-  function dot(cx, cy, angle, r, size) {
-    ctx.beginPath();
-    ctx.arc(px(cx, r, angle), py(cy, r, angle), size, 0, TAU);
-    ctx.stroke();
+  /* ---------- one band ---------- */
+
+  function drawBand(c, cx, cy, band, index, appear, phase) {
+    var f = band.r1 / R;
+    var alpha = MAX_ALPHA * Math.pow(1 - f, FALLOFF) * appear;
+    if (alpha < 0.004) return;
+
+    c.strokeStyle = colorAt(f, alpha);
+    c.lineWidth = f < 0.35 ? 1.15 : 1;
+
+    var grown = band.r0 + (band.r1 - band.r0) * appear;
+    var step = TAU / band.count;
+    /* Every second ornate band is offset half a step so petals interlock
+       with the band beneath instead of stacking in identical spokes. */
+    var offset = phase + (index % 2 ? step * 0.5 : 0);
+
+    if (band.type === 'ring') {
+      c.beginPath();
+      c.arc(cx, cy, grown, 0, TAU);
+      c.stroke();
+      var inner = band.r0 + (grown - band.r0) * 0.55;
+      if (inner > 3) {
+        c.beginPath();
+        c.arc(cx, cy, inner, 0, TAU);
+        c.stroke();
+      }
+      return;
+    }
+
+    for (var k = 0; k < band.count; k++) {
+      var angle = offset + k * step;
+      switch (band.type) {
+        case 'rosette':
+          rosette(c, cx, cy, angle, band.r0, grown, step * 0.60);
+          break;
+        case 'lotus':
+          lotus(c, cx, cy, angle, band.r0, grown, step * 0.62, 3);
+          break;
+        case 'fan':
+          fan(c, cx, cy, angle, band.r0, grown, step * 0.60);
+          break;
+        case 'arcade':
+          arcade(c, cx, cy, angle, step, band.r0, grown);
+          break;
+        case 'scallop':
+          scallop(c, cx, cy, angle, step, band.r0, grown);
+          break;
+        case 'saw':
+          saw(c, cx, cy, angle, step, band.r0, grown);
+          break;
+        case 'comb':
+          comb(c, cx, cy, angle, band.r0, grown);
+          break;
+        case 'beads':
+          var br = (band.r0 + grown) * 0.5;
+          c.beginPath();
+          c.arc(px(cx, br, angle), py(cy, br, angle),
+                Math.max(0.9, (band.r1 - band.r0) * 0.24 * appear), 0, TAU);
+          c.stroke();
+          break;
+      }
+    }
   }
 
-  /* ---------- one mandala ---------- */
+  function appearance(band, frontier) {
+    return smoothstep((frontier - band.r0) / (R * GROW_BAND));
+  }
 
-  function drawMandala(cx, cy, progress, phase) {
-    if (progress <= 0) return;
+  /* Bands that have finished growing are painted once into the cache. */
+  function commitFinished(cx, cy, progress, phase, done) {
     var frontier = progress * R;
+    while (done < bands.length && appearance(bands[done], frontier) >= 1) {
+      drawBand(cctx, cx, cy, bands[done], done, 1, phase);
+      done++;
+    }
+    return done;
+  }
 
-    for (var i = 0; i < rings.length; i++) {
-      var ring = rings[i];
-
-      var appear = smoothstep((frontier - ring.r0) / (R * GROW_BAND));
-      if (appear <= 0) continue;
-
-      var f = ring.r1 / R;
-      var alpha = MAX_ALPHA * Math.pow(1 - f, FALLOFF) * appear;
-      if (alpha < 0.004) continue;
-
-      ctx.strokeStyle = colorAt(f, alpha);
-      ctx.lineWidth = f < 0.4 ? 1.15 : 1;
-
-      var grown = ring.r0 + (ring.r1 - ring.r0) * appear;
-      var step = TAU / ring.count;
-      var offset = phase + i * 0.21;
-
-      if (ring.type === 'ring') {
-        ctx.beginPath();
-        ctx.arc(cx, cy, grown, 0, TAU);
-        ctx.stroke();
-        var inner = ring.r0 + (grown - ring.r0) * 0.62;
-        if (inner > 2) {
-          ctx.beginPath();
-          ctx.arc(cx, cy, inner, 0, TAU);
-          ctx.stroke();
-        }
-        continue;
-      }
-
-      for (var k = 0; k < ring.count; k++) {
-        var angle = offset + k * step;
-        switch (ring.type) {
-          case 'petal':
-            petal(cx, cy, angle, ring.r0, grown, step * 0.62, false);
-            break;
-          case 'petalVein':
-            petal(cx, cy, angle, ring.r0, grown, step * 0.62, true);
-            break;
-          case 'scallop':
-            scallop(cx, cy, angle, step, ring.r0, grown);
-            break;
-          case 'saw':
-            saw(cx, cy, angle, step, ring.r0, grown);
-            break;
-          case 'comb':
-            comb(cx, cy, angle, ring.r0, grown);
-            break;
-          case 'beads':
-            dot(cx, cy, angle, (ring.r0 + grown) * 0.5,
-                Math.max(0.9, (ring.r1 - ring.r0) * 0.22 * appear));
-            break;
-        }
-      }
+  function drawGrowing(cx, cy, progress, phase, done) {
+    var frontier = progress * R;
+    for (var i = done; i < bands.length; i++) {
+      var appear = appearance(bands[i], frontier);
+      if (appear <= 0) break;
+      drawBand(ctx, cx, cy, bands[i], i, appear, phase);
     }
   }
 
   /* ---------- frame ---------- */
 
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
+  function progressNow() {
+    if (reduceMotion) return 1;
     var elapsed = startedAt === null ? 0 : Date.now() - startedAt;
-    var p = reduceMotion ? 1 : Math.min(elapsed / DURATION, 1);
-    var pB = reduceMotion ? 1
-      : Math.min(Math.max(elapsed / DURATION - STAGGER, 0) / (1 - STAGGER), 1);
+    var t = Math.min(elapsed / DURATION, 1);
+    return openingProgress + (1 - openingProgress) * t;
+  }
 
-    drawMandala(0, H, p, -0.22);     // bottom-left corner
-    drawMandala(W, 0, pB, 0.63);     // top-right corner
+  function draw() {
+    var p = progressNow();
 
-    return p >= 1 && pB >= 1;
+    doneA = commitFinished(0, H, p, -0.22, doneA);
+    doneB = commitFinished(W, 0, p, 0.63, doneB);
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(cache, 0, 0, W, H);
+
+    drawGrowing(0, H, p, -0.22, doneA);
+    drawGrowing(W, 0, p, 0.63, doneB);
+
+    return p >= 1 && doneA >= bands.length && doneB >= bands.length;
   }
 
   function tick(now) {
-    if (now - lastPaint >= 60) {     // this grows slowly; no need for 60fps
+    if (now - lastPaint >= 60) {   // this grows slowly; no need for 60fps
       lastPaint = now;
       if (draw()) { rafId = null; return; }
     }
@@ -258,14 +351,25 @@
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth;
     H = window.innerHeight;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
+
+    [canvas, cache].forEach(function (el) {
+      el.width = Math.round(W * dpr);
+      el.height = Math.round(H * dpr);
+    });
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cctx.clearRect(0, 0, W, H);
 
-    R = H;                 // a finished mandala reaches the top of the page
-    rings = buildRings(R);
+    R = H;                        // a finished mandala reaches the top of the page
+    bands = buildBands(R);
+    doneA = doneB = 0;            // cache invalidated by the resize
+
+    /* Open with the first few bands already drawn so there is something to see
+       the instant the page loads. */
+    var opened = bands[Math.min(OPENING_BANDS, bands.length - 1)];
+    openingProgress = (opened.r0 / R) + GROW_BAND;
 
     if (rafId === null) draw(); else start();
   }
@@ -283,7 +387,7 @@
       window.sessionStorage.setItem(STORAGE_KEY, String(startedAt));
     }
   } catch (err) {
-    startedAt = Date.now();          // private browsing: just start fresh
+    startedAt = Date.now();       // private browsing: just start fresh
   }
 
   var resizeTimer = null;
