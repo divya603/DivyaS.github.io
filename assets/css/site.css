@@ -181,7 +181,7 @@ body:not(.paint-shell) {
   font-weight: 800;
   font-size: 3rem;
   line-height: 1.05;
-  color: var(--site-heading);
+  color: #ff7518; /* pumpkin */
   margin: 0 0 1.6rem;
 }
 

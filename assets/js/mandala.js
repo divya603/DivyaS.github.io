@@ -1,7 +1,6 @@
 /* Background mandalas, henna/mehndi style.
    Two mandalas grow outward from the bottom-left and top-right corners of the
-   viewport over ~90 seconds: deep ginger at the centre warming to sunset gold
-   at the rim.
+   viewport over ~90 seconds, in soft apricot that deepens toward the centre.
 
    The vocabulary is deliberately all curves -- coiled spirals, veined leaves,
    paisley teardrops, lobed blooms and lacy scallops. No straight radial rules
@@ -26,7 +25,7 @@
   var cctx = cache.getContext('2d');
 
   var DURATION = 90000;   // ms to grow from the opening state to full size
-  var MAX_ALPHA = 0.85;   // ink strength at the centre
+  var MAX_ALPHA = 0.68;   // ink strength at the centre
   var FALLOFF = 0.8;      // gentle: line-work stays visible out to the rim
   var GROW_BAND = 0.085;  // fraction of the radius a band takes to fade in
   var OPENING_BANDS = 5;  // bands already drawn when the page first opens
@@ -57,18 +56,17 @@
     { type: 'dots',    w: 0.22, m: 15 },
     { type: 'paisley', w: 1.45, m: 11 },
     { type: 'lace',    w: 0.36, m: 17 },
-    { type: 'bloom',   w: 1.50, m: 12 },
-    { type: 'lace',    w: 0.34, m: 20 }
+    { type: 'bloom',   w: 1.50, m: 12 }
   ];
 
-  /* Deep ginger at the centre, sunset orange through the middle, warm gold at
-     the rim -- saturated the whole way rather than washing out. */
+  /* Soft apricot: warmer and deeper at the centre, paling toward the rim.
+     Kept light so the line-work sits behind the text without competing. */
   var STOPS = [
-    [0.00, 172, 54, 8],
-    [0.28, 199, 78, 14],
-    [0.58, 221, 118, 28],
-    [0.82, 233, 154, 48],
-    [1.00, 240, 182, 74]
+    [0.00, 224, 138, 86],
+    [0.28, 232, 158, 112],
+    [0.58, 240, 184, 146],
+    [0.82, 246, 206, 174],
+    [1.00, 250, 224, 198]
   ];
 
   var TAU = Math.PI * 2;
