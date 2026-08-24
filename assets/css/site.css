@@ -36,8 +36,8 @@ body:not(.paint-shell) {
    mask guarantees both corners render pixel-identical. */
 .mandala-corner {
   position: fixed;
-  width: 200vh;
-  height: 200vh;
+  width: 130vh;
+  height: 130vh;
   pointer-events: none;
   z-index: 0;
   background: linear-gradient(135deg, #f58220 0%, #ffd23f 100%);
@@ -47,13 +47,13 @@ body:not(.paint-shell) {
   mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
-  opacity: 0.62;
+  opacity: 0.36;
   clip-path: circle(9% at 50% 50%);
   animation: mandala-grow 90s cubic-bezier(0.42, 0, 0.58, 1) forwards;
 }
 
 [data-theme="dark"] .mandala-corner {
-  opacity: 0.8;
+  opacity: 0.5;
 }
 
 .mandala-corner--bl {
