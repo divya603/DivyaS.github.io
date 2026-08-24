@@ -28,12 +28,56 @@ body:not(.paint-shell) {
   color: var(--site-text);
 }
 
-/* ---- Background mandalas (assets/js/mandala.js) ---- */
-#mandala-bg {
+/* ---- Background mandalas (assets/js/mandala.js) ----
+   Two identical copies of the same traced mandala artwork, anchored so only
+   one quadrant of each peeks into the bottom-left and top-right corners of
+   the viewport. Colour comes from a CSS gradient masked by the artwork's
+   line-work (mandala-mask.png: transparent background, opaque lines); the
+   mask guarantees both corners render pixel-identical. */
+.mandala-corner {
   position: fixed;
-  inset: 0;
-  z-index: 0;
+  width: 200vh;
+  height: 200vh;
   pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(135deg, #f58220 0%, #ffd23f 100%);
+  -webkit-mask-image: url("../images/mandala-mask.png");
+  mask-image: url("../images/mandala-mask.png");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  opacity: 0.62;
+  clip-path: circle(9% at 50% 50%);
+  animation: mandala-grow 90s cubic-bezier(0.42, 0, 0.58, 1) forwards;
+}
+
+[data-theme="dark"] .mandala-corner {
+  opacity: 0.8;
+}
+
+.mandala-corner--bl {
+  left: 0;
+  top: 100vh;
+  transform: translate(-50%, -50%);
+}
+
+.mandala-corner--tr {
+  left: 100vw;
+  top: 0;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes mandala-grow {
+  from { clip-path: circle(9% at 50% 50%); }
+  to   { clip-path: circle(52% at 50% 50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mandala-corner {
+    animation: none;
+    clip-path: circle(52% at 50% 50%);
+  }
 }
 
 /* ---- Centered shell: nav and content share one column ---- */
